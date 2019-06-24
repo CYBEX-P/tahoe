@@ -3,7 +3,6 @@ from collections import OrderedDict
 from uuid import uuid4
 import json
 
-
 class Instance():
     def __init__(self, _nid, uuid, _raw_ref, _valid):
         
@@ -21,9 +20,10 @@ class Instance():
 
     def validate(self):
         instance = vars(self)
-        schema_name = "schema\\" + self.itype + ".json"
-        with open(schema_name) as f:
-            schema = json.load(f)
+##        schema_name = "schema\\" + self.itype + ".json"
+##        with open(schema_name) as f:
+##            schema = json.load(f)
+        schema = json.loads(eval(self.itype + "_schema"))
         d = Draft7Validator(schema)
         d.validate(instance)
 
@@ -92,4 +92,107 @@ class Attribute(Instance):
         self._obj_ref = _obj_ref
 
         super().__init__(_nid, uuid, _raw_ref, _valid)
+
+
+attribute_schema = """
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "title": "attribute_core",
+  "description" : "Validate core structure of an attribute.",
+  "required": ["itype", "uuid", "att_type", "value"],
+  "properties": {
+    "itype": {"const" : "attribute"},
+    "_nid": { "type": "integer", "minimum" : 1, "maximum" : 9223372036854775806 },
+    "uuid": { "type": "string", "pattern" : "^attribute--[0-9a-fA-F]{8}\\-[0-9a-fA-F]{4}\\-[0-9a-fA-F]{4}\\-[89abAB][0-9a-fA-F]{3}\\-[0-9a-fA-F]{12}$"},
+	"_obj_ref" : { "type" : "array", "items" : {  "type": "integer"} },
+	"_raw_ref" : { "type" : "array", "items" : {  "type": "integer"} },
+	"_valid": {"type": "boolean"},
+	"att_type": { "enum" : ["asn", "btc", "text", "domain", "filename", "hash", "hostname", "ipv4", "ipv6", "md5", "network", "port", "sha1", "sha224", "sha256", "time", "timeiso","timestamp", "timezone", "uri", "url"]},
+	"value": {"oneOf" : [{"type": "integer"}, {"type": "string"}]}
+  },
+  "additionalProperties": false,
+  
+  "allOf" : [
+  
+  {"if":{"properties":{"att_type":{"const":     "asn"    }}}, "then": {"properties": { "value": { "type": "integer", "minimum": 1, "maximum": 65535 }}}},
+  
+  {"if":{"properties":{"att_type":{"const":     "btc"    }}}, "then": {"properties": { "value": { "type": "string", "pattern": "^[13][a-km-zA-HJ-NP-Z1-9]{25,34}$" }}}},
+  
+  {"if":{"properties":{"att_type":{"const":   "text"  }}}, "then": {"properties": { "value": { "type": "string", "maxLength": 1000 }}}},
+  
+  {"if":{"properties":{"att_type":{"const":   "domain"   }}}, "then": {"properties": { "value": { "type": "string", "pattern": "^(?!:\/\/)([a-zA-Z0-9-_]+\\.)*[a-zA-Z0-9][a-zA-Z0-9-_]+\\.[a-zA-Z]{2,11}?$" }}}},
+  
+  {"if":{"properties":{"att_type":{"const":  "filename"  }}}, "then": {"properties": { "value": { "type": "string", "pattern": "^[\\w\\-. ]+$" }}}},
+   
+  {"if":{"properties":{"att_type":{"const":    "hash"    }}}, "then": {"properties": { "value": { "type": "string", "pattern": "^[a-fA-F0-9]+$" }}}},
+  
+  {"if":{"properties":{"att_type":{"const":  "hostname"  }}}, "then": {"properties": { "value": { "type": "string", "pattern": "^(([a-zA-Z0-9]|[a-zA-Z0-9][a-zA-Z0-9\\-]*[a-zA-Z0-9])\\.)*([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9\\-]*[A-Za-z0-9])$" }}}},
+  
+  {"if":{"properties":{"att_type":{"const":    "ipv4"    }}}, "then": {"properties": { "value": { "type": "string", "pattern": "^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])$" }}}},
+  
+  {"if":{"properties":{"att_type":{"const":    "ipv6"    }}}, "then": {"properties": { "value": { "type": "string", "pattern": "^(([0-9a-fA-F]{1,4}:){7,7}[0-9a-fA-F]{1,4}|([0-9a-fA-F]{1,4}:){1,7}:|([0-9a-fA-F]{1,4}:){1,6}:[0-9a-fA-F]{1,4}|([0-9a-fA-F]{1,4}:){1,5}(:[0-9a-fA-F]{1,4}){1,2}|([0-9a-fA-F]{1,4}:){1,4}(:[0-9a-fA-F]{1,4}){1,3}|([0-9a-fA-F]{1,4}:){1,3}(:[0-9a-fA-F]{1,4}){1,4}|([0-9a-fA-F]{1,4}:){1,2}(:[0-9a-fA-F]{1,4}){1,5}|[0-9a-fA-F]{1,4}:((:[0-9a-fA-F]{1,4}){1,6})|:((:[0-9a-fA-F]{1,4}){1,7}|:)|fe80:(:[0-9a-fA-F]{0,4}){0,4}%[0-9a-zA-Z]{1,}|::(ffff(:0{1,4}){0,1}:){0,1}((25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9])\\.){3,3}(25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9])|([0-9a-fA-F]{1,4}:){1,4}:((25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9])\\.){3,3}(25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9]))$" }}}},
+  
+  {"if":{"properties":{"att_type":{"const":     "md5"    }}}, "then": {"properties": { "value": { "type": "string", "pattern": "^[a-fA-F\\d]{32}$" }}}},
+  
+  {"if":{"properties":{"att_type":{"const":   "network"  }}}, "then": {"properties": { "value": { "type": "string", "pattern": "^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])(\/(3[0-2]|[1-2][0-9]|[0-9]))$" }}}},
+  
+  {"if":{"properties":{"att_type":{"const":    "port"    }}}, "then": {"properties": { "value": { "type": "integer", "minimum": 1, "maximum": 65535 }}}},
+  
+  {"if":{"properties":{"att_type":{"const":    "sha1"    }}}, "then": {"properties": { "value": { "type": "string", "pattern": "^[0-9A-Fa-f]{5,40}$" }}}},
+  
+  {"if":{"properties":{"att_type":{"const":   "sha256"   }}}, "then": {"properties": { "value": { "type": "string", "pattern": "^[A-Fa-f0-9]{64}$" }}}},
+  
+  {"if":{"properties":{"att_type":{"const":  "timestamp" }}}, "then": {"properties": { "value": { "type": "number", "minimum": 0}}}},
+
+  {"if":{"properties":{"att_type":{"const":     "url"    }}}, "then": {"properties": { "value": { "type": "string"}}}}
+
+  
+  ]
+}
+"""
+
+event_schema = """
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "title": "event_core",
+  "description" : "Validate core structure of an event.",
+  "required": ["itype", "uuid", "event_type", "objects"],
+  "properties": {
+	"itype": {"const" : "event"},
+    "_nid": { "type": "integer", "minimum" : 1, "maximum" : 9223372036854775806 },
+    "uuid": { "type": "string", "pattern" : "^event--[0-9a-fA-F]{8}\\-[0-9a-fA-F]{4}\\-[0-9a-fA-F]{4}\\-[89abAB][0-9a-fA-F]{3}\\-[0-9a-fA-F]{12}$" },
+	"timestamp": { "type": "number", "minimum": 0 },
+	"_session_ref" : { "type" : "array", "items" : {  "type": "integer"} },
+	"_raw_ref" : { "type" : "array", "items" : {  "type": "integer"} },
+	"_valid": {"type": "boolean"},
+	"event_type": { "enum" : ["firewall_log", "email", "ssh_login", "payload_delivery", "sighting", "cowrie", "file_download"]},
+	"objects": { "type" : "array"},
+	"malicious" : {"type" : "boolean"}
+  },
+  "additionalProperties": false
+}
+"""
+
+object_schema = """
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "title": "object_core",
+  "description" : "Validate core structure of an object.",
+  "required": ["itype", "uuid", "obj_type", "attributes"],
+  "properties": {
+    "itype": {"const" : "object"},
+    "_nid": { "type": "integer", "minimum" : 1, "maximum" : 9223372036854775806 },
+    "uuid": { "type": "string", "pattern" : "^object--[0-9a-fA-F]{8}\\-[0-9a-fA-F]{4}\\-[0-9a-fA-F]{4}\\-[89abAB][0-9a-fA-F]{3}\\-[0-9a-fA-F]{12}$" },
+	"_event_ref" : { "type" : "array", "items" : {  "type": "integer"} },
+	"_raw_ref" : { "type" : "array", "items" : {  "type": "integer"} },
+	"_valid": {"type": "boolean"},
+	"obj_type": { "enum" : ["autonomous-system", "btc", "comment", "domain", "file", "hash", "host", "ip", "network", "port", "time", "uri", "url"]},
+	"attributes": { "type" : "object"}
+  },
+  "additionalProperties": false
+}
+"""
 
