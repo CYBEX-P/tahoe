@@ -11,7 +11,7 @@
 	"_event_ref" : { "type" : "array", "items" : {  "type": "integer"} },
 	"_raw_ref" : { "type" : "array", "items" : {  "type": "integer"} },
 	"_valid": {"type": "boolean"},
-	"obj_type": { "enum" : ["autonomous-system", "btc", "comment", "domain", "file", "hash", "host", "ip", "network", "port", "time", "uri", "url"]},
+	"obj_type": { "enum" : ["autonomous-system", "btc", "comment", "domain", "dst_ip", "dst_port", "file", "hash", "host", "network", "port", "protocol", "session_identifier", "src_ip", "src_port", "time", "uri", "url"]},
 	"attributes": { "type" : "object"}
   },
   "additionalProperties": false

@@ -3,19 +3,13 @@
   "type": "object",
   "title": "event_core",
   "description" : "Validate core structure of a session.",
-  "required": ["itype", "orgid", "uuid", "event_type", "objects"],
+  "required": ["itype", "uuid", "identifiers"],
   "properties": {
-	"itype": {"const" : "event"},
-    "_nid": { "type": "integer", "minimum" : 1, "maximum" : 9223372036854775806 },
-    "uuid": { "type": "string", "pattern" : "^event--[0-9a-fA-F]{8}\\-[0-9a-fA-F]{4}\\-[0-9a-fA-F]{4}\\-[89abAB][0-9a-fA-F]{3}\\-[0-9a-fA-F]{12}$" },
-	"orgid": { "type": "string", "pattern" : "^identity--[0-9a-fA-F]{8}\\-[0-9a-fA-F]{4}\\-[0-9a-fA-F]{4}\\-[89abAB][0-9a-fA-F]{3}\\-[0-9a-fA-F]{12}$" },
-	"timestamp": { "type": "number", "minimum": 0 },
-	"_session_ref" : { "type" : "array", "items" : {  "type": "integer"} },
-	"_raw_ref" : { "type" : "array", "items" : {  "type": "integer"} },
-	"_valid": {"type": "boolean"},
-	"event_type": { "enum" : ["firewall_log", "email", "ssh_login", "payload_delivery", "sighting", "cowrie", "file_download"]},
-	"objects": { "type" : "array"},
-	"malicious" : {"type" : "boolean"}
+	"itype": {"const" : "session"},
+    "uuid": { "type": "string", "pattern" : "^session--[0-9a-fA-F]{8}\\-[0-9a-fA-F]{4}\\-[0-9a-fA-F]{4}\\-[89abAB][0-9a-fA-F]{3}\\-[0-9a-fA-F]{12}$" },
+	"session_type": { "enum" : ["cowrie_session", "placeholder"]},
+	"identifiers" : {"type" : "array"},
+	"event_ref": {"type" : "array"}
   },
   "additionalProperties": false
 }

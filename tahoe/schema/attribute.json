@@ -11,7 +11,7 @@
 	"_obj_ref" : { "type" : "array", "items" : {  "type": "integer"} },
 	"_raw_ref" : { "type" : "array", "items" : {  "type": "integer"} },
 	"_valid": {"type": "boolean"},
-	"att_type": { "enum" : ["asn", "btc", "text", "domain", "filename", "hash", "hostname", "ipv4", "ipv6", "md5", "network", "port", "sessionid", "sha1", "sha224", "sha256", "time", "timeiso","timestamp", "timezone", "uri", "url"]},
+	"att_type": { "enum" : ["asn", "btc", "text", "domain", "filename", "hash", "hostname", "ipv4", "ipv6", "md5", "network", "port", "protocol", "sessionid", "sha1", "sha224", "sha256", "time", "timeiso","timestamp", "timezone", "uri", "url"]},
 	"value": {"oneOf" : [{"type": "integer"}, {"type": "string"}]}
   },
   "additionalProperties": false,

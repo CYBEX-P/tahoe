@@ -1,7 +1,7 @@
 class Backend():
     def __init__(self): return None
     def get_instance(self, *args): return None
-    def update_uuid(self, *args): return None
+    def add_ref_uuid(self, *args): return None
     def insert_one(self, *args): return None
 
 class NoBackend(Backend):

@@ -7,17 +7,24 @@ from backend import MongoBackend, NoBackend
 class Instance():
     def __init__(self, backend):
         if type(backend) not in [NoBackend, MongoBackend]: raise TypeError('Backend cannot be of type ' + type(backend))
-        duplicate = self.get_duplicate(backend)
-        if not duplicate:
+        self.backend = backend
+        duplicate = self.get_duplicate()
+        if duplicate: [setattr(self,k,v) for k,v in duplicate.items()]
+        else:
             self.uuid = self.itype + '--' + str(uuid4())
             self.validate()
-            backend.insert_one(vars(self))
-        else: self.__dict__ = duplicate
+            self.backend.insert_one(self.document())
+
+    def document(self): return {k:v for k,v in vars(self).items() if k not in ['backend']}
+
+    def json(self): return json.dumps(self.document())
 
     def __str__(self): return self.json()
 
+    def serialize(self): pass
+
     def validate(self):
-        instance = vars(self)
+        instance = self.document()
         schema_name = __file__.rsplit('\\',1)[0] + "\\schema\\" + self.itype + ".json"
         with open(schema_name) as f: schema = json.load(f)
         d = Draft7Validator(schema)
@@ -32,15 +39,24 @@ class Instance():
         else: dota = [{old[:-1] : val}]
         return dota 
 
-    def get_duplicate(self, backend):
-        query = self.json_2_query_list(vars(self))
-        duplicate = backend.get_instance(query)
+    def get_duplicate(self):
+        query = self.json_2_query_list(self.document())
+        duplicate = self.backend.get_instance(query)
         return duplicate
-
-    def json(self): return json.dumps(vars(self))
     
-    def serialize(self): pass
-                
+
+class Session(Instance):
+    def __init__(self, session_type, identifiers, event_ref = [], backend=NoBackend()):
+        if not isinstance(identifiers, list): identifiers = [identifiers]
+        if not isinstance(event_ref, list): event_ref = [event_ref]
+        self.itype, self.session_type, self.event_ref = 'session', session_type, event_ref
+        self.identifiers = [obj.data() for obj in identifiers]
+        super().__init__(backend)
+        for obj in identifiers: obj.update_event_uuid(self.uuid)
+
+    def add_event(self, event):
+        self.event_ref.append(event.uuid)
+        self.backend.add_ref_uuid(self.uuid, "event_ref", event.uuid)
     
 class Event(Instance):
     def __init__(self, event_type, orgid, objects, timestamp, malicious=False, backend=NoBackend()):
@@ -48,7 +64,7 @@ class Event(Instance):
         self.itype, self.event_type, self.orgid, self.timestamp, self.malicious = 'event', event_type, orgid, timestamp, malicious
         self.objects = [obj.data() for obj in objects]
         super().__init__(backend)
-        for obj in objects: obj.update_event_uuid(self.uuid, backend)
+        for obj in objects: obj.update_event_uuid(self.uuid)
 
 
 class Object(Instance):
@@ -57,13 +73,11 @@ class Object(Instance):
         self.itype, self.obj_type = 'object', obj_type
         self.attributes = {att.att_type : att.value for att in attributes}
         super().__init__(backend)
-        for att in attributes: att.update_obj_uuid(self.uuid, backend)
-
-    def add_event_ref(uuid): self._event_ref.append(uuid)
+        for att in attributes: att.update_obj_uuid(self.uuid)
 
     def data(self): return {self.obj_type : {k:v for k,v in self.attributes.items()} }
 
-    def update_event_uuid(self, event_uuid, backend): backend.add_ref_uuid(self.uuid, "_event_ref", event_uuid)
+    def update_event_uuid(self, event_uuid): self.backend.add_ref_uuid(self.uuid, "_event_ref", event_uuid)
         
 
 class Attribute(Instance):
@@ -71,7 +85,14 @@ class Attribute(Instance):
         self.itype, self.att_type, self.value = 'attribute', att_type, value
         super().__init__(backend)
 
-    def update_obj_uuid(self, obj_uuid, backend): backend.add_ref_uuid(self.uuid, "_obj_ref", obj_uuid)
+    def update_obj_uuid(self, obj_uuid): self.backend.add_ref_uuid(self.uuid, "_obj_ref", obj_uuid)
+
+
+
+
+### =======================================================
+### +===================== Example 1 ======================
+### =======================================================
 
 
 ##j = r"""{
@@ -150,5 +171,50 @@ class Attribute(Instance):
 ##e = Event('file_download', 'identity--61de9cc8-d015-4461-9b34-d2fb39f093fb',
 ##          [url_obj, file_obj], timestamp, backend=db)
 ##
+##hostname = data['host']['name']
+##hostname_att = Attribute('hostname', hostname, backend=db)
+##sessionid = data['session']
+##sessionid_att = Attribute('sessionid', sessionid, backend=db)
 ##
+##session_obj = Object('session_identifier', [hostname_att, sessionid_att], backend=db)
+##session = Session('cowrie_session', session_obj, backend=db)
+##
+##session.add_event(e)
+##print(session)
+##
+##                     
 ##print(url_att.uuid, '\n', url_obj.uuid, '\n', e.uuid)
+
+
+
+
+
+
+
+### ========================================================
+### ================== Example 2 ===========================
+### ========================================================
+
+##src_ip = '1.1.1.1'
+##src_ip_attr = Attribute('ipv4', src_ip)
+##src_ip_obj = Object('src_ip', src_ip_attr)
+##
+##src_port = 50005
+##src_port_attr = Attribute('port', src_port)
+##src_port_obj = Object('src_port', src_port_attr)
+##
+##dst_ip = '2.2.2.2'
+##dst_ip_attr = Attribute('ipv4', dst_ip)
+##dst_ip_obj = Object('dst_ip', dst_ip_attr)
+##
+##dst_port = 80
+##dst_port_attr = Attribute('port', dst_port)
+##dst_port_obj = Object('dst_port', dst_port_attr)
+##
+##protocol = 'TCP'
+##protocol_attr = Attribute('protocol', protocol)
+##protocol_obj = Object('protocol', protocol_attr)
+##
+##firewall_event = Event('firewall_log', 'identity--61de9cc8-d015-4461-9b34-d2fb39f093fb',
+##                      [src_ip_obj, dst_ip_obj, src_port_obj, dst_port_obj, protocol_obj], 12345678)
+##print(firewall_event)
