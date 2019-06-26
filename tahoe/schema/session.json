@@ -2,7 +2,7 @@
   "$schema": "http://json-schema.org/draft-07/schema#",
   "type": "object",
   "title": "event_core",
-  "description" : "Validate core structure of an event.",
+  "description" : "Validate core structure of a session.",
   "required": ["itype", "orgid", "uuid", "event_type", "objects"],
   "properties": {
 	"itype": {"const" : "event"},
