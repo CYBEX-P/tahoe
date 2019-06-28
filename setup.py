@@ -14,7 +14,8 @@ setuptools.setup(
     url="https://github.com/pypa/tahoe",
     packages=setuptools.find_packages(),
     data_files=[('tahoe/schema', ['tahoe/schema/attribute.json',
-                'tahoe/schema/object.json', 'tahoe/schema/event.json']),],
+                'tahoe/schema/object.json', 'tahoe/schema/event.json',
+                'tahoe/schema/session.json', 'tahoe/schema/raw.json']),],
     classifiers=[
         "Programming Language :: Python :: 3",
         "License :: OSI Approved :: MIT License",

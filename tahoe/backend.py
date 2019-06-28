@@ -15,6 +15,14 @@ class MongoBackend(Backend):
         if not projection: projection = {"_id" : 0}
         return self.coll.find_one(query, projection)
 
+    def find(self, query, projection=None):
+        query = {"$and": query}
+        if not projection: projection = {"_id" : 0}
+        return self.coll.find(query, projection)
+
+    def update_one(self, query, update):
+        self.coll.update_one(query, update)
+    
     def add_ref_uuid(self, inst_uuid, ref_array, ref_uuid):
         self.coll.update_one( {"uuid" : inst_uuid}, {"$addToSet": {ref_array: ref_uuid}})
 

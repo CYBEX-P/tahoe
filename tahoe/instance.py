@@ -2,11 +2,12 @@ from jsonschema import Draft7Validator
 from uuid import uuid4
 import json, pdb
 
-from backend import MongoBackend, NoBackend
+if __name__ == "__main__": from backend import MongoBackend, NoBackend
+else: from .backend import MongoBackend, NoBackend
 
 class Instance():
     def __init__(self, backend):
-        if type(backend) not in [NoBackend, MongoBackend]: raise TypeError('Backend cannot be of type ' + type(backend))
+        if type(backend) not in [NoBackend, MongoBackend]: raise TypeError('Backend cannot be of type ' + str(type(backend)))
         self.backend = backend
         duplicate = self.get_duplicate()
         if duplicate: [setattr(self,k,v) for k,v in duplicate.items()]
@@ -15,7 +16,7 @@ class Instance():
             self.validate()
             self.backend.insert_one(self.document())
 
-    def document(self): return {k:v for k,v in vars(self).items() if k not in ['backend']}
+    def document(self): return {k:v for k,v in vars(self).items() if v and k not in ['backend']}
 
     def json(self): return json.dumps(self.document())
 
@@ -43,7 +44,12 @@ class Instance():
         query = self.json_2_query_list(self.document())
         duplicate = self.backend.get_instance(query)
         return duplicate
-    
+
+class Raw(Instance):
+    def __init__(self, raw_type, data, orgid=None, timestamp=None, timezone="UTC", backend=NoBackend()):
+        if isinstance(data, str): data = json.loads(data)
+        self.itype, self.raw_type, self.data, self.orgid, self.timestamp, self.timezone = 'raw', raw_type, data, orgid, timestamp, timezone
+        super().__init__(backend)        
 
 class Session(Instance):
     def __init__(self, session_type, identifiers, event_ref = [], backend=NoBackend()):
@@ -65,7 +71,6 @@ class Event(Instance):
         self.objects = [obj.data() for obj in objects]
         super().__init__(backend)
         for obj in objects: obj.update_event_uuid(self.uuid)
-
 
 class Object(Instance):
     def __init__(self, obj_type, attributes, backend=NoBackend()):
@@ -90,131 +95,119 @@ class Attribute(Instance):
 
 
 
-### =======================================================
-### +===================== Example 1 ======================
-### =======================================================
+def example1():
+    j = r"""{
+        "sensor" : "ssh-peavine",
+        "@timestamp" : "2019-03-06T06:46:28.515Z",
+        "geoip" : {
+            "country_code2" : "US",
+            "location" : {
+                "lat" : 37.3501,
+                "lon" : -121.9854
+            },
+            "region_code" : "CA",
+            "postal_code" : "95051",
+            "timezone" : "America/Los_Angeles",
+            "continent_code" : "NA",
+            "city_name" : "Santa Clara",
+            "longitude" : -121.9854,
+            "ip" : "165.227.0.144",
+            "country_name" : "United States",
+            "dma_code" : 807,
+            "latitude" : 37.3501,
+            "region_name" : "California",
+            "country_code3" : "US"
+        },
+        "host" : {
+            "name" : "ssh-peavine"
+        },
+        "session" : "619c9c48b812",
+        "@version" : "1",
+        "eventid" : "cowrie.session.file_download",
+        "timestamp" : "2019-03-06T06:46:27.400128Z",
+        "src_ip" : "165.227.0.144",
+        "outfile" : "var/lib/cowrie/downloads/bf69f4219069098da61a80641265d8834b474474957742510105d70703ebdb27",
+        "beat" : {
+            "version" : "6.5.4",
+            "name" : "ssh-peavine",
+            "hostname" : "ssh-peavine"
+        },
+        "tags" : [ 
+            "beats_input_codec_plain_applied", 
+            "geoip", 
+            "beats_input_codec_json_applied"
+        ],
+        "shasum" : "bf69f4219069098da61a80641265d8834b474474957742510105d70703ebdb27",
+        "prospector" : {
+            "type" : "log"
+        },
+        "msg" : "Downloaded URL (http://165.227.0.144:80/bins/rift.x86) with SHA-256 bf69f4219069098da61a80641265d8834b474474957742510105d70703ebdb27 to var/lib/cowrie/downloads/bf69f4219069098da61a80641265d8834b474474957742510105d70703ebdb27",
+        "source" : "/home/cowrie/cowrie/var/log/cowrie/cowrie.json",
+        "offset" : 23030686,
+        "url" : "http://165.227.0.144:80/bins/rift.x86",
+        "destfile" : "-"
+    }"""
+
+    from datetime import datetime as dt
+    from pymongo import MongoClient
+    URI = 'mongodb://cybexp_user:CybExP_777@134.197.21.231:27017/?authSource=admin'
+    client = MongoClient(URI)
+    db = MongoBackend(client.tahoe_db)
+
+    data = json.loads(j)
+
+    url = data['url']
+    filename = url.split('/')[-1]
+    sha256 = data['shasum']
+
+    url_att = Attribute('url', url, backend=db)
+    filename_att = Attribute('filename', filename, backend=db)
+    sha256_att = Attribute('sha256', sha256, backend=db)
+
+    url_obj = Object('url', [url_att], backend=db)   
+    file_obj = Object('file', [filename_att, sha256_att], backend=db)
+
+    timestamp = data["@timestamp"]
+    timestamp = dt.fromisoformat(timestamp.replace("Z", "+00:00")).timestamp()
+    e = Event('file_download', 'identity--61de9cc8-d015-4461-9b34-d2fb39f093fb',
+              [url_obj, file_obj], timestamp, backend=db)
+
+    hostname = data['host']['name']
+    hostname_att = Attribute('hostname', hostname, backend=db)
+    sessionid = data['session']
+    sessionid_att = Attribute('sessionid', sessionid, backend=db)
+
+    session_obj = Object('session_identifier', [hostname_att, sessionid_att], backend=db)
+    session = Session('cowrie_session', session_obj, backend=db)
+    session.add_event(e)
+
+    raw_type = "x-unr-honeypot"
+    orgid = "identity--f27df111-ca31-4700-99d4-2635b6c37851"
+    orgid = None
+    raw = Raw(raw_type, data, orgid, backend=db)
+
+                     
+
+    from pprint import pprint
+    pprint(raw.document())
+    print("\n")
+    
+    pprint(url_att.document())
+    print("\n")
+    pprint(filename_att.document())
+    print("\n")
+    pprint(sha256_att.document())
+    print("\n")
+    
+    pprint(url_obj.document())
+    print("\n")
+    pprint(file_obj.document())
+    print("\n")
+    
+    pprint(e.document())
+    print("\n")
+    
+    pprint(session.document())
 
 
-##j = r"""{
-##    "sensor" : "ssh-peavine",
-##    "@timestamp" : "2019-03-06T06:46:28.515Z",
-##    "geoip" : {
-##        "country_code2" : "US",
-##        "location" : {
-##            "lat" : 37.3501,
-##            "lon" : -121.9854
-##        },
-##        "region_code" : "CA",
-##        "postal_code" : "95051",
-##        "timezone" : "America/Los_Angeles",
-##        "continent_code" : "NA",
-##        "city_name" : "Santa Clara",
-##        "longitude" : -121.9854,
-##        "ip" : "165.227.0.144",
-##        "country_name" : "United States",
-##        "dma_code" : 807,
-##        "latitude" : 37.3501,
-##        "region_name" : "California",
-##        "country_code3" : "US"
-##    },
-##    "host" : {
-##        "name" : "ssh-peavine"
-##    },
-##    "session" : "619c9c48b812",
-##    "@version" : "1",
-##    "eventid" : "cowrie.session.file_download",
-##    "timestamp" : "2019-03-06T06:46:27.400128Z",
-##    "src_ip" : "165.227.0.144",
-##    "outfile" : "var/lib/cowrie/downloads/bf69f4219069098da61a80641265d8834b474474957742510105d70703ebdb27",
-##    "beat" : {
-##        "version" : "6.5.4",
-##        "name" : "ssh-peavine",
-##        "hostname" : "ssh-peavine"
-##    },
-##    "tags" : [ 
-##        "beats_input_codec_plain_applied", 
-##        "geoip", 
-##        "beats_input_codec_json_applied"
-##    ],
-##    "shasum" : "bf69f4219069098da61a80641265d8834b474474957742510105d70703ebdb27",
-##    "prospector" : {
-##        "type" : "log"
-##    },
-##    "msg" : "Downloaded URL (http://165.227.0.144:80/bins/rift.x86) with SHA-256 bf69f4219069098da61a80641265d8834b474474957742510105d70703ebdb27 to var/lib/cowrie/downloads/bf69f4219069098da61a80641265d8834b474474957742510105d70703ebdb27",
-##    "source" : "/home/cowrie/cowrie/var/log/cowrie/cowrie.json",
-##    "offset" : 23030686,
-##    "url" : "http://165.227.0.144:80/bins/rift.x86",
-##    "destfile" : "-"
-##}"""
-##
-##from datetime import datetime as dt
-##from pymongo import MongoClient
-##URI = 'mongodb://cybexp_user:CybExP_777@134.197.21.231:27017/?authSource=admin'
-##client = MongoClient(URI)
-##db = MongoBackend(client.tahoe_db)
-##
-##data = json.loads(j)
-##
-##url = data['url']
-##filename = url.split('/')[-1]
-##sha256 = data['shasum']
-##
-##url_att = Attribute('url', url, backend=db)
-##filename_att = Attribute('filename', filename, backend=db)
-##sha256_att = Attribute('sha256', sha256, backend=db)
-##
-##url_obj = Object('url', [url_att], backend=db)   
-##file_obj = Object('file', [filename_att, sha256_att], backend=db)
-##
-##timestamp = data["@timestamp"]
-##timestamp = dt.fromisoformat(timestamp.replace("Z", "+00:00")).timestamp()
-##e = Event('file_download', 'identity--61de9cc8-d015-4461-9b34-d2fb39f093fb',
-##          [url_obj, file_obj], timestamp, backend=db)
-##
-##hostname = data['host']['name']
-##hostname_att = Attribute('hostname', hostname, backend=db)
-##sessionid = data['session']
-##sessionid_att = Attribute('sessionid', sessionid, backend=db)
-##
-##session_obj = Object('session_identifier', [hostname_att, sessionid_att], backend=db)
-##session = Session('cowrie_session', session_obj, backend=db)
-##
-##session.add_event(e)
-##print(session)
-##
-##                     
-##print(url_att.uuid, '\n', url_obj.uuid, '\n', e.uuid)
-
-
-
-
-
-
-
-### ========================================================
-### ================== Example 2 ===========================
-### ========================================================
-
-##src_ip = '1.1.1.1'
-##src_ip_attr = Attribute('ipv4', src_ip)
-##src_ip_obj = Object('src_ip', src_ip_attr)
-##
-##src_port = 50005
-##src_port_attr = Attribute('port', src_port)
-##src_port_obj = Object('src_port', src_port_attr)
-##
-##dst_ip = '2.2.2.2'
-##dst_ip_attr = Attribute('ipv4', dst_ip)
-##dst_ip_obj = Object('dst_ip', dst_ip_attr)
-##
-##dst_port = 80
-##dst_port_attr = Attribute('port', dst_port)
-##dst_port_obj = Object('dst_port', dst_port_attr)
-##
-##protocol = 'TCP'
-##protocol_attr = Attribute('protocol', protocol)
-##protocol_obj = Object('protocol', protocol_attr)
-##
-##firewall_event = Event('firewall_log', 'identity--61de9cc8-d015-4461-9b34-d2fb39f093fb',
-##                      [src_ip_obj, dst_ip_obj, src_port_obj, dst_port_obj, protocol_obj], 12345678)
-##print(firewall_event)
+if __name__ == "__main__": example1()

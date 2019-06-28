@@ -1,7 +1,7 @@
 import json
 
-from instance import Session, Event, Object, Attribute
-from backend import NoBackend
+from .instance import Session, Event, Object, Attribute
+from .backend import NoBackend
 
 def parse(instance, backend=NoBackend()):
     if isinstance(instance, str): instance = json.loads(instance)
