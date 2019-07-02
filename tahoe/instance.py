@@ -1,14 +1,26 @@
 from jsonschema import Draft7Validator
 from uuid import uuid4
-import json, pdb
+import json, pdb, os
 
 if __name__ == "__main__": from backend import MongoBackend, NoBackend
 else: from .backend import MongoBackend, NoBackend
 
+def decode_backend_config():
+    mongo_url = os.getenv("_MONGO_URL")
+    analytics_db = os.getenv("_ANALYTICS_DB", "tahoe_db")
+    analytics_coll = os.getenv("_ANALYTICS_COLL", "instances")
+
+    client = MongoClient(mongo_url)
+    analytics_db = client.get_database(analytics_db)
+    analytics_backend = MongoBackend(analytics_db)
+    return analytics_backend
+
 class Instance():
     def __init__(self, backend):
+        if os.getenv("_MONGO_URL"): self.backend = decode_backend_config()
+        else: self.backend = backend
         if type(backend) not in [NoBackend, MongoBackend]: raise TypeError('Backend cannot be of type ' + str(type(backend)))
-        self.backend = backend
+        
         duplicate = self.get_duplicate()
         if duplicate: [setattr(self,k,v) for k,v in duplicate.items()]
         else:
@@ -16,7 +28,7 @@ class Instance():
             self.validate()
             self.backend.insert_one(self.document())
 
-    def document(self): return {k:v for k,v in vars(self).items() if v and k not in ['backend']}
+    def document(self): return {k:v for k,v in vars(self).items() if k not in ['backend']}
 
     def json(self): return json.dumps(self.document())
 
@@ -25,6 +37,7 @@ class Instance():
     def serialize(self): pass
 
     def validate(self):
+        print(self.itype)
         instance = self.document()
         schema_name = __file__.rsplit('\\',1)[0] + "\\schema\\" + self.itype + ".json"
         with open(schema_name) as f: schema = json.load(f)
@@ -41,9 +54,21 @@ class Instance():
         return dota 
 
     def get_duplicate(self):
-        query = self.json_2_query_list(self.document())
+        keys_to_remove = ["uuid", "event_ref", "_obj_ref", "_event_ref", "_raw_ref", "_session_ref", "filters"]
+        doc = self.document()
+        for k in keys_to_remove: doc.pop(k, None)
+        
+        query = self.json_2_query_list(doc)
         duplicate = self.backend.get_instance(query)
         return duplicate
+
+    def update(self, update):
+        for k,v in update.items(): setattr(self, k, v)
+        self.backend.update_one({"uuid" : self.uuid}, {"$set" : update})
+
+    def update_cross_ref(self, instance_uuid_list):
+        self.backend.update_one( {"uuid":self.uuid}, {"$addToSet" : {"_ref" : instance_uuid_list} })
+        self.backend.update_many( {"uuid" : {"$in" : instance_uuid_list} }, {"$addToSet" : {"_ref" : self.uuid} } )
 
 class Raw(Instance):
     def __init__(self, raw_type, data, orgid=None, timestamp=None, timezone="UTC", backend=NoBackend()):
@@ -52,17 +77,21 @@ class Raw(Instance):
         super().__init__(backend)        
 
 class Session(Instance):
-    def __init__(self, session_type, identifiers, event_ref = [], backend=NoBackend()):
+    def __init__(self, session_type, identifiers, _event_ref=[], backend=NoBackend()):
         if not isinstance(identifiers, list): identifiers = [identifiers]
-        if not isinstance(event_ref, list): event_ref = [event_ref]
-        self.itype, self.session_type, self.event_ref = 'session', session_type, event_ref
+        self.itype, self.session_type, self._event_ref, self.backend = 'session', session_type, _event_ref, backend
         self.identifiers = [obj.data() for obj in identifiers]
         super().__init__(backend)
-        for obj in identifiers: obj.update_event_uuid(self.uuid)
+        self.update_cross_ref([obj.uuid for obj in identifiers])
 
-    def add_event(self, event):
-        self.event_ref.append(event.uuid)
-        self.backend.add_ref_uuid(self.uuid, "event_ref", event.uuid)
+    def __iter__(self): return iter(self.backend.find( "$and" : [ {"uuid":{"$in" : self._ref}}, {"itype":"event"} ] ))
+        
+    def add_event(self, event_list):
+        if not isinstance(event_list, list): event_list = [event_list]
+        event_uuid_list = [event.uuid for event in event_list]
+        self._ref + event_uuid_list
+        self.update_cross_ref(event_uuid_list)
+        
     
 class Event(Instance):
     def __init__(self, event_type, orgid, objects, timestamp, malicious=False, backend=NoBackend()):
@@ -70,7 +99,16 @@ class Event(Instance):
         self.itype, self.event_type, self.orgid, self.timestamp, self.malicious = 'event', event_type, orgid, timestamp, malicious
         self.objects = [obj.data() for obj in objects]
         super().__init__(backend)
-        for obj in objects: obj.update_event_uuid(self.uuid)
+        self.update_cross_ref([obj.uuid for obj in objects])
+
+    def __iter__(self): return iter(self.backend.find( "$and" : [ {"uuid":{"$in" : self._ref}}, {"itype":"object"} ] ))
+
+    def sessions(self): return iter(self.backend.find( "$and" : [ {"uuid":{"$in" : self._ref}}, {"itype":"session"} ] ))
+
+    def add_object(self, new_objects):
+        if not isinstance(new_objects, list): new_objects = [new_objects]
+        self.objects += [obj.data() for obj in new_objects]
+        self.update_cross_ref([obj.uuid for obj in new_objects])
 
 class Object(Instance):
     def __init__(self, obj_type, attributes, backend=NoBackend()):
@@ -78,20 +116,27 @@ class Object(Instance):
         self.itype, self.obj_type = 'object', obj_type
         self.attributes = {att.att_type : att.value for att in attributes}
         super().__init__(backend)
-        for att in attributes: att.update_obj_uuid(self.uuid)
+        self.update_cross_ref([att.uuid for att in attributes])
 
-    def data(self): return {self.obj_type : {k:v for k,v in self.attributes.items()} }
+    def __iter__(self): return iter(self.backend.find( "$and" : [ {"uuid":{"$in" : self._ref}}, {"itype":"attribute"} ] ))
 
-    def update_event_uuid(self, event_uuid): self.backend.add_ref_uuid(self.uuid, "_event_ref", event_uuid)
-        
+    def events(self): return iter(self.backend.find( "$and" : [ {"uuid":{"$in" : self._ref}}, {"itype":"event"} ] ))
+
+    def data(self): return {self.obj_type : {k:v for k,v in self.attributes.items()} }       
+
+    def add_attribute(self, new_attributes):
+        if not isinstance(new_attributes, list): new_attributes = [new_attributes]
+        old_obj = self.data() 
+        self.attributes.update({att.att_type : att.value for att in new_attributes})       
+        new_obj = self.data()
+        self.update_cross_ref([att.uuid for att in new_attributes])
+        pdb.set_trace()
+        self.backend.update_many({"uuid" : event_id}, {} })
 
 class Attribute(Instance):
     def __init__(self, att_type, value, backend=NoBackend()):
         self.itype, self.att_type, self.value = 'attribute', att_type, value
         super().__init__(backend)
-
-    def update_obj_uuid(self, obj_uuid): self.backend.add_ref_uuid(self.uuid, "_obj_ref", obj_uuid)
-
 
 
 
