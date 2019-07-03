@@ -7,9 +7,9 @@
   "properties": {
     "itype": {"const" : "object"},
     "uuid": { "type": "string", "pattern" : "^object--[0-9a-fA-F]{8}\\-[0-9a-fA-F]{4}\\-[0-9a-fA-F]{4}\\-[89abAB][0-9a-fA-F]{3}\\-[0-9a-fA-F]{12}$" },
-	"obj_type": { "enum" : ["attacker", "autonomous-system", "btc", "comment", "data", "domain", "dst", "dst_port", "duration", "end_time", "file", "hash", "host", "login_credential", "login_success", "network", "port", "protocol", "session_identifier", "shell_command", "src", "src_port", "ssh", "time", "uri", "url"]},
+	"obj_type": { "enum" : ["attacker", "autonomous-system", "btc", "command_success", "comment", "comp_algo_set", "data", "domain", "dst", "dst_port", "duration", "encr_algo_set", "end_time", "file", "hash", "host", "kex_algo_set", "login_credential", "login_success", "mac_algo_set", "network", "port", "protocol", "pub_key_algo_set", "session_identifier", "shell_command", "src", "src_port", "ssh_version", "time", "uri", "url"]},
 	"attributes": { "type" : "object"},
-	"_ref" : { "type" : "array", "items" : { "type": "string", "pattern" : "^[attribute|event|raw]--[0-9a-fA-F]{8}\\-[0-9a-fA-F]{4}\\-[0-9a-fA-F]{4}\\-[89abAB][0-9a-fA-F]{3}\\-[0-9a-fA-F]{12}$"} }
+	"_ref" : { "type" : "array", "items" : { "type": "string", "pattern" : "^(attribute|event|raw)--[0-9a-fA-F]{8}\\-[0-9a-fA-F]{4}\\-[0-9a-fA-F]{4}\\-[89abAB][0-9a-fA-F]{3}\\-[0-9a-fA-F]{12}$"} }
   },
   "additionalProperties": false
 }
