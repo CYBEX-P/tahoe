@@ -1,4 +1,5 @@
 from pymongo import MongoClient
+import os
 
 class Backend():
     def __init__(self): return None
@@ -13,16 +14,16 @@ class NoBackend(Backend):
 
 class MongoBackend(Backend):
     def __init__(self, db): self.coll = db.instances
-
+    def aggregate(self, *args, **kwargs): return self.coll.aggregate(*args, **kwargs)
+    def insert_one(self, *args, **kwargs): self.coll.insert_one(*args, **kwargs)
+    def insert_many(self, *args, **kwargs): self.coll.insert_many(*args, **kwargs)
+    
     def find(self, query, projection={"_id" : 0}): return self.coll.find(query, projection)
-
     def find_one(self, query, projection={"_id" : 0}): return self.coll.find_one(query, projection)
 
-    def update_one(self, query, update): self.coll.update_one(query, update)
+    def update_one(self, query, update, *args, **kwargs): self.coll.update_one(query, update, *args, **kwargs)
 
-    def update_many(self, query, update): self.coll.update_many(query, update)
-
-    def insert_one(self, document): self.coll.insert_one(document)
+    def update_many(self, query, update, *args, **kwargs): self.coll.update_many(query, update, *args, **kwargs)
     
     def add_ref_uuid(self, inst_uuid, ref_array, ref_uuid):
         self.coll.update_one( {"uuid" : inst_uuid}, {"$addToSet": {ref_array: ref_uuid}})
@@ -32,7 +33,7 @@ class MongoBackend(Backend):
         return self.coll.find_one(query, projection)
     
 
-def env_config_2_backend():
+def get_backend():
     mongo_url = os.getenv("_MONGO_URL")
     analytics_db = os.getenv("_ANALYTICS_DB", "tahoe_db")
     analytics_coll = os.getenv("_ANALYTICS_COLL", "instances")

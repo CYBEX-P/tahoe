@@ -1,12 +1,12 @@
 import json, os
 from pymongo import MongoClient
 
-from .backend import env_config_2_backend, NoBackend, MongoBackend
+from .backend import get_backend, NoBackend, MongoBackend
 from .instance import Attribute, Object, Event, Session, Raw
 
 def parse(instance, backend=NoBackend()):
-    if os.getenv("_MONGO_URL"): backend = env_config_2_backend()
-    else: self.backend = backend
+    if os.getenv("_MONGO_URL"): backend = get_backend()
+    else: backend = backend
     if isinstance(instance, str): instance = json.loads(instance)
     instance.pop("_id", None)
     t = Attribute('text', 'mock')

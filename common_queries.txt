@@ -1,0 +1,7 @@
+db.getCollection('instances').find({"itype" : {"$nin" : ["raw"]}})
+db.getCollection('instances').deleteMany({"itype" : {"$nin" : ["raw"]} })
+db.getCollection('instances').find({"filters" : {"$exists" : true}})
+db.getCollection('instances').updateMany({},{"$unset":{"filters": ""}})
+db.getCollection('instances').find({"$and" : [{"raw_type" : "x-unr-honeypot"}, {"filters" : { "$ne": "filter--ad8c8d0c-0b25-4100-855e-06350a59750c" }}, { "data.eventid" : {"$exists":true}}, {"_valid" : {"$ne" : false}}]})
+
+db.getCollection('instances').find({"uuid" : {"$in" : ["event--ec7c0510-310b-49fa-90c6-4d70aa5a0a72","event--ca6e831a-2bb9-4461-acea-9c9f0b13199d"]}})
