@@ -27,9 +27,7 @@ class Instance():
 
     def serialize(self): pass
 
-    def validate(self):
-        logging.info(self.itype + "     : tahoe.instance.instance.validate")
-        Draft7Validator(schema[self.itype]).validate(self.document())
+    def validate(self): Draft7Validator(schema[self.itype]).validate(self.document())
 
     def sync(self): self._ref = self.backend.find_one({"uuid" : self.uuid})["_ref"]
 
@@ -66,6 +64,14 @@ class Instance():
         visited.add(self.uuid)
         if level: [parse(i).related_uuid(level-1, visited) for i in self.backend.find({"uuid":{"$in" : self._ref}})]
         return visited
+
+    def verify_instances(self, instances, lst_name):
+        if type(instances) is not list: instances = [instances]
+        if not instances: raise ValueError(lst_name + " cannot be empty")
+        itype = {'attributes':Attribute, 'objects':Object, 'identifiers':Object, 'events':Event}.get(lst_name)
+        if not all(map(lambda x: x == itype, [type(i) for i in instances])):
+            raise TypeError(lst_name + " must be of type tahoe." + str(itype))
+        return instances
     
 class Raw(Instance):
     def __init__(self, raw_type, data, orgid=None, timestamp=None, timezone="UTC", backend=NoBackend()):
@@ -75,7 +81,7 @@ class Raw(Instance):
 
 class Session(Instance):
     def __init__(self, session_type, identifiers, _ref=[], backend=NoBackend()):
-        if not isinstance(identifiers, list): identifiers = [identifiers]
+        identifiers = self.verify_instances(identifiers, 'identifiers')
         self.itype, self.session_type, self._ref, self.backend = 'session', session_type, _ref, backend
         self.identifiers = [obj.data() for obj in identifiers]
         super().__init__(backend)
@@ -90,9 +96,9 @@ class Session(Instance):
     
 class Event(Instance):
     def __init__(self, event_type, orgid, objects, timestamp, malicious=False, backend=NoBackend()):
-        if type(objects) is not list: objects = [objects]
+        objects = self.verify_instances(objects, 'objects')        
         self.itype, self.event_type, self.orgid, self.timestamp, self.malicious = 'event', event_type, orgid, timestamp, malicious
-        self.objects = [obj.data() for obj in objects]
+        self.objects = [obj.data() for obj in objects ]
         super().__init__(backend)
         self.cross_ref(objects)
 
@@ -107,7 +113,7 @@ class Event(Instance):
 
 class Object(Instance):
     def __init__(self, obj_type, attributes, backend=NoBackend()):
-        if type(attributes) is not list: attributes = [attributes]
+        attributes = self.verify_instances(attributes, 'attributes')
         self.itype, self.obj_type = 'object', obj_type
         self.attributes = [att.data() for att in attributes]
         super().__init__(backend)
@@ -149,9 +155,9 @@ class Attribute(Instance):
             else: count += sum([start <= e["timestamp"] <= end for e in parse(obj).events()])
         return count
 
+
 def parse(instance, backend=NoBackend()):
-    if os.getenv("_MONGO_URL"): backend = get_backend()
-    else: backend = backend
+    backend = get_backend() if os.getenv("_MONGO_URL") else backend
     if isinstance(instance, str): instance = json.loads(instance)
     instance.pop("_id", None)
     t = Attribute('text', 'mock')
@@ -159,6 +165,37 @@ def parse(instance, backend=NoBackend()):
     t.__class__ = {'attribute':Attribute, 'event':Event, 'object':Object, 'raw':Raw, 'session':Session}.get(instance['itype'])
     t.validate()
     return t
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
