@@ -13,8 +13,8 @@ class Instance():
         self.backend = get_backend() if os.getenv("_MONGO_URL") else backend
         if not isinstance(backend, Backend): raise TypeError('Backend cannot be of type ' + str(type(backend)))
 
-        dup = self.duplicate()
-        if dup: [setattr(self,k,v) for k,v in dup.items()]
+        duplicate = self.get_duplicate()
+        if duplicate: [setattr(self,k,v) for k,v in duplicate.items()]
         else: 
             if not hasattr(self, 'uuid'): self.uuid = self.itype + '--' + str(uuid4())
             self._ref = []
@@ -25,7 +25,7 @@ class Instance():
 
     def doc(self): return {k:v for k,v in vars(self).items() if v is not None and k not in ['backend','schema']}
 
-    def duplicate(self):
+    def get_duplicate(self):
         doc, keys_to_remove = self.doc(), ["uuid", "_ref", "filters"]
         for k in keys_to_remove: doc.pop(k, None)
         return self.backend.find_one({"$and" : self.json_dot(doc)})
@@ -46,18 +46,7 @@ class Instance():
         uuids = [i.uuid for i in instances]
         if self.itype != 'session': uuids += [r for i in instances for r in i._ref]
         self.backend.update_one( {"uuid":self.uuid}, {"$addToSet" : {"_ref" : {"$each" : uuids}} })
-        self.sync()
-
-    def related(self,lvl=1): return self.backend.find({"uuid":{"$in":self.related_uuid(lvl)}})
-
-    def related_uuid(self, lvl, v=[]):
-        uuids = []
-        for e in self.events({"itype":1,"uuid":1,"_ref":1}):
-            if e["uuid"] in v: continue
-            uuids += parse(e, self.backend, False).related_uuid(lvl-1,v)
-        return uuids
-
-    def parents(self, q={}, p={"_id":0}): return self.backend.find({**{"_ref":self.uuid}, **q}, p)
+        self.sync()          
 
     def serialize(self): pass
 
@@ -94,10 +83,18 @@ class Session(Instance):
         self.child_ref(data)
 
     def __iter__(self): return iter( self.backend.find({"uuid":{"$in" : self._ref}, "itype":"event"}))
-
-    def events(self, p={"_id":0}): return self.backend.find({"uuid":{"$in" : self._ref}, "itype":"event"}, p)
         
     def add_event(self, new_events): self.child_ref(new_events)
+
+    def related_uuid(self, level, v):
+        u = []
+        r = self.backend.find({"itype":"event","uuid":{"$in":self._ref}},{"uuid":1,"itype":1,"_ref":1})
+        print("query --------------------------")
+        for e in r:
+##            if e["uuid"] == v: continue
+            e = parse(e, self.backend)
+            u += e.related_uuid(level)
+        return u
 
     
 class Event(Instance):
@@ -108,16 +105,25 @@ class Event(Instance):
         super().__init__(backend)
         self.child_ref(data)
 
-    def __iter__(self): return iter(self.backend.find({"uuid":{"$in" : self._ref}}))
+    def __iter__(self): return iter(self.backend.find({"uuid":{"$in" : self._ref}, "itype":"object"}))
 
-    def sessions(self, p={"_id":0}): return super().parents({"itype":"session"},p)
+    def related_uuid(self, level):
+        if level == 0: return self._ref + [self.uuid]
+        u = []
+        r = self.backend.find({"itype":"session","_ref":self.uuid},{"itype":1,"_ref":1})
+        print("query --------------------------")
+        for s in r:
+            s = parse(s, self.backend)
+            u += s.related_uuid(level-1, self.uuid)
+        return u
 
-    def related_uuid(self, lvl=0, v=[]):
-        uuids = self._ref + [self.uuid]
-        if lvl == 0: return uuids
-        for s in self.sessions({"itype":1,"uuid":1,"_ref":1}):
-            uuids += parse(s, self.backend).related_uuid(lvl,v+[self.uuid])
-        return uuids
+
+##    def sessions(self): return iter(self.backend.find({ "$and" : [ {"uuid":{"$in" : self._ref}}, {"itype":"session"} ] }))
+
+##    def add_object(self, new_objects):
+##        if not isinstance(new_objects, list): new_objects = [new_objects]
+##        self.objects += [obj.data() for obj in new_objects]
+##        self.child_ref([obj.uuid for obj in new_objects])
 
 
 class Object(Instance):
@@ -128,11 +134,22 @@ class Object(Instance):
         super().__init__(backend)
         self.child_ref(data)
     
-    def __iter__(self): return iter(self.backend.find({"uuid":{"$in" : self._ref}}))
+    def __iter__(self): return iter(self.backend.find({"uuid":{"$in" : self._ref}, "itype":"attribute"}))    
 
-    def events(self, p={"_id":0}): return super().parents({"itype":"event"},p)
+##    def event_uuid(self): return [event["uuid"] for event in self.backend.find({ "$and" : [ {"uuid":{"$in" : self._ref}}, {"itype":"event"} ] })]
+    
+    def events(self): return iter(self.backend.find({"uuid":{"$in" : self._ref}, "itype":"event"}))
 
     def get_data(self): return {self.obj_type : self.data}
+
+##    def add_attribute(self, new_attributes):
+##        if not isinstance(new_attributes, list): new_attributes = [new_attributes]
+##        old_obj = self.data() 
+##        self.attributes += [att.data() for att in new_attributes]
+##        new_obj = self.data()
+##        self.child_ref(new_attributes)
+##        self.backend.update_many({"uuid" : {"$in" : self.event_uuid()}}, {"$pull" : {"objects" : old_obj}})
+##        self.backend.update_many({"uuid" : {"$in" : self.event_uuid()}}, {"$push" : {"objects" : new_obj}})
 
 
 class Attribute(Instance):
@@ -142,17 +159,35 @@ class Attribute(Instance):
         super().__init__(backend)
         self.create_alias()
 
+##    def count(self, start=None, end=None, count=0):
+##        for obj in self.objects():
+##            if not start and not end: count += sum([ref[:5]=="event" for ref in obj["_ref"]])
+##            elif start and not end: count += sum([start <= e["timestamp"] for e in parse(obj).events()])
+##            elif not start and end: count += sum([e["timestamp"] <= end for e in parse(obj).events()])
+##            else: count += sum([start <= e["timestamp"] <= end for e in parse(obj).events()])
+##        return count
+    
     def create_alias(self):
         att_type_lst = _ATT_ALIAS.get(self.att_type)
         if not att_type_lst: return
         if not isinstance(att_type_lst, list): att_type_lst = [att_type_lst]
         for att_type in att_type_lst: Attribute(att_type, self.data, backend=self.backend, uuid = self.uuid)
 
-    def events(self, p={"_id":0}): return super().parents({"itype":"event"},p)
-
     def get_data(self): return {self.att_type : self.data}
+    
+    def objects(self): return iter(self.backend.find({ "$and" : [ {"uuid":{"$in" : self._ref}}, {"itype":"object"} ] }))
 
-    def objects(self, p={"_id":0}): return super().parents({"itype":"object"},p)
+    def related_uuid(self, level=1):
+        projection = {"itype":1,"uuid":1,"_ref":1}
+        u = []
+        r = self.backend.find({"itype":"event", "_ref":self.uuid},projection)
+        print("query ------------------------------ ")
+        for e in r:
+            e = parse(e, self.backend)
+            u += e.related_uuid(level-1)
+        return u
+    
+    
     
 
 def parse(instance, backend=NoBackend(), validate=True):
@@ -328,10 +363,8 @@ def example1():
     pprint(raw.doc())
     print("\n")
 
-    try:
-        uu = url_att.related_uuid(lvl=1)
-        for i in uu: print(i)
-    except Exception as e: logging.error("Uh oh ", exc_info=True)
+    uu = url_att.related_uuid(level=2)
+    for i in uu: print(i)
     pdb.set_trace()
     
     
