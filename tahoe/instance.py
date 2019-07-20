@@ -1,7 +1,7 @@
 from jsonschema import Draft7Validator
 from uuid import uuid4
 from sys import getsizeof as size
-import json, pdb, os, pytz, pathlib, logging
+import json, pdb, os, pytz, pathlib, logging, time
 
 if __name__ == "__main__": from backend import get_backend, Backend, MongoBackend, NoBackend
 else: from .backend import get_backend, Backend, MongoBackend, NoBackend
@@ -32,7 +32,7 @@ class Instance():
 
     def json(self): return json.dumps(self.doc())
 
-    def related(self,lvl=1): return self.backend.find({"uuid":{"$in":self.related_uuid(lvl)}})
+    def related(self,lvl=1): return self.backend.find({"uuid":{"$in":list(set(self.related_uuid(lvl)))}})
 
     def related_uuid(self, lvl, v=[]):
         uuids = []
@@ -43,13 +43,7 @@ class Instance():
 
     def parents(self, q={}, p={"_id":0}): return self.backend.find({**{"_ref":self.uuid}, **q}, p)
 
-    def serialize(self): pass
-
     def sync(self): self._ref = self.backend.find_one({"uuid" : self.uuid})["_ref"]
-
-    def update(self, update):
-        for k,v in update.items(): setattr(self, k, v)
-        self.backend.update_one({"uuid" : self.uuid}, {"$set" : update})
 
 ##    def validate(self): Draft7Validator(schema[self.itype]).validate(self.doc())
 
@@ -71,31 +65,8 @@ class Raw(Instance):
 
     def duplicate(self): return self.backend.find_one({"itype":self.itype, "data":self.data})
 
-        
-class Session(Instance):
-    def __init__(self, session_type, identifiers=[], **kwargs):
-        self.itype, self.session_type = 'session', session_type
-        identifiers = self.verified_instances(identifiers, [Attribute, Object])
-        self.identifiers = [i.get_data() for i in identifiers]
-        self._ref = [i.uuid for i in identifiers]
-        super().__init__(**kwargs)
-    
-    def __iter__(self): return iter( self.backend.find({"uuid":{"$in" : self._ref}, "itype":"event"}))
 
-    def duplicate(self): return self.backend.find_one({"itype":self.itype, "identifiers":self.identifiers})
-
-##    def __hash__(self): return hash((self.itype, tuple(self.data)))
-
-    def events(self, p={"_id":0}):
-        return self.backend.find({"uuid":{"$in" : self._ref}, "itype":"event"}, p)
-        
-    def add_event(self, events):
-        events = self.verified_instances(events, [Event])
-        self._ref = self._ref + [i.uuid for i in events]
-        self.backend.update_one( {"uuid":self.uuid}, {"$set":{"_ref":self._ref}})
-
-
-class OE(Instance):
+class OES(Instance):
     def __init__(self, data, **kwargs):
         data = self.verified_instances(data, [Attribute, Object])
         self.data = [i.get_data() for i in data] 
@@ -107,33 +78,47 @@ class OE(Instance):
 
     def __iter__(self): return iter(self.backend.find({"uuid":{"$in" : self._ref}}))
 
+        
+class Session(OES):
+    def __init__(self, session_type, data=None, **kwargs):
+        self.itype, self.session_type, self._eref = 'session', session_type, []
+        super().__init__(data, **kwargs)
+
+    def duplicate(self): return self.backend.find_one({"session_type":self.session_type, "_ref":self._ref})
+
+    def events(self, p={"_id":0}): return self.backend.find({"uuid":{"$in" : self._eref}}, p)
+        
+    def add_event(self, events):
+        events = self.verified_instances(events, [Event])
+        self._eref = self._eref + [i.uuid for i in events]
+        self._eref = sorted(list(set(self._eref)))
+        self.backend.update_one( {"uuid":self.uuid}, {"$set":{"_eref":self._eref}})
+
     
-class Event(OE):
+class Event(OES):
     def __init__(self, event_type, data, orgid, timestamp, malicious=False, **kwargs):
         self.itype, self.event_type, self.orgid = 'event', event_type, orgid
         self.timestamp, self.malicious = timestamp, malicious
         super().__init__(data, **kwargs)
 
-##    def duplicate(self): return self.backend.find_one({"itype":"event", "event_type":self.event_type, "_ref":{"$size":len(self._ref),"$all":self._ref}})
-
-    def duplicate(self): return self.backend.find_one({"itype":"event", "event_type":self.event_type, "_ref":self._ref})
+    def duplicate(self): return self.backend.find_one({"event_type":self.event_type, "_ref":self._ref})
 
     def sessions(self, p={"_id":0}): return super().parents({"itype":"session"},p)
 
     def related_uuid(self, lvl=0, v=[]):
         uuids = self._ref + [self.uuid]
         if lvl == 0: return uuids
-        for s in self.sessions({"itype":1,"uuid":1,"_ref":1}):
+        for s in self.sessions({"itype":1,"uuid":1,"_eref":1}):
             uuids += parse(s, self.backend).related_uuid(lvl,v+[self.uuid])
         return uuids
 
 
-class Object(OE):
+class Object(OES):
     def __init__(self, obj_type, data, **kwargs):
         self.itype, self.obj_type = 'object', obj_type
         super().__init__(data, **kwargs)
 
-    def duplicate(self): return self.backend.find_one({"itype":"object", "obj_type":self.obj_type, "_ref":self._ref})
+    def duplicate(self): return self.backend.find_one({"obj_type":self.obj_type, "_ref":self._ref})
 
     def events(self, p={"_id":0}): return super().parents({"itype":"event"},p)
 
@@ -340,11 +325,25 @@ def example1():
     pprint(raw.doc())
     print("\n")
 
-    try:
-##        pdb.set_trace()
+    d1, d2, d3 = 0, 0, 0
+    n = 100
+    for i in range(n):
+        t1 = time.time()
         uu = url_att.related_uuid(lvl=1)
-        for i in uu: print(i)
-    except Exception as e: logging.error("Uh oh ", exc_info=True)
+        t2 = time.time()
+        uu = url_att.related_uuid(lvl=2)
+        t3 = time.time()
+        uu = url_att.related_uuid(lvl=3)
+        t4 = time.time()
+
+        d1 += t2-t1
+        d2 += t3-t2
+        d3 += t4-t3
+
+    print(d1/n, d2/n, d3/n)
+
+    for i in url_att.related(lvl=20): print(i["uuid"])
+        
     pdb.set_trace()
     
     
