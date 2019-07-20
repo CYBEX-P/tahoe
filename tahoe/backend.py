@@ -16,8 +16,8 @@ class MongoBackend(Backend):
     def __init__(self, db): self.coll = db.instances
     def aggregate(self, *args, **kwargs): return self.coll.aggregate(*args, **kwargs)
     
-    def find(self, query, projection={"_id" : 0}):
-        r = self.coll.find(query, projection)
+    def find(self, query, projection={"_id" : 0}, *args, **kwargs):
+        r = self.coll.find(query, projection, *args, **kwargs)
         if not r: pdb.set_trace()
         return {} if not r else r
     

@@ -1,23 +1,28 @@
 from jsonschema import Draft7Validator
 from uuid import uuid4
+from sys import getsizeof as size
 import json, pdb, os, pytz, pathlib, logging
 
 if __name__ == "__main__": from backend import get_backend, Backend, MongoBackend, NoBackend
 else: from .backend import get_backend, Backend, MongoBackend, NoBackend
 
 ##schema = {k : json.loads(open(((__file__[:-11]+ "schema\\%s.json") %k)).read()) for k in ["attribute","object","event","session","raw"]}
-_ATT_ALIAS = {"ipv4":"ip", "ipv6":"ip", "md5":"hash", "sha256":"hash"}
+_ATT_ALIAS = {"ipv4":["ip"], "ipv6":["ip"], "md5":["hash"], "sha256":["hash"]}
 
 class Instance():
-    def __init__(self, backend):
-        self.backend = get_backend() if os.getenv("_MONGO_URL") else backend
-        if not isinstance(backend, Backend): raise TypeError('Backend cannot be of type ' + str(type(backend)))
+    backend = get_backend() if os.getenv("_MONGO_URL") else NoBackend()
+    
+    def __init__(self, **kwargs):
+        if type(self.backend) == NoBackend and os.getenv("_MONGO_URL"): self.backend = get_backend()
+        if kwargs.get('backend'): self.backend = kwargs.get('backend') 
+        if not isinstance(self.backend, Backend):
+            raise TypeError('Backend cannot be of type ' + str(type(backend)))
 
         dup = self.duplicate()
         if dup: [setattr(self,k,v) for k,v in dup.items()]
         else: 
-            if not hasattr(self, 'uuid'): self.uuid = self.itype + '--' + str(uuid4())
-            self._ref = []
+            if not hasattr(self, 'uuid') or not self.uuid:
+                self.uuid = self.itype + '--' + str(uuid4())
             self.backend.insert_one(self.doc())
 ##      self.validate()        
 
@@ -25,28 +30,7 @@ class Instance():
 
     def doc(self): return {k:v for k,v in vars(self).items() if v is not None and k not in ['backend','schema']}
 
-    def duplicate(self):
-        doc, keys_to_remove = self.doc(), ["uuid", "_ref", "filters"]
-        for k in keys_to_remove: doc.pop(k, None)
-        return self.backend.find_one({"$and" : self.json_dot(doc)})
-
     def json(self): return json.dumps(self.doc())
-
-    def json_dot(self, val, old = ""):
-        dota = []
-        if isinstance(val, dict):
-            for k in val.keys(): dota += self.json_dot(val[k], old + str(k) + ".") 
-        elif isinstance(val, list):
-            for k in val: dota += self.json_dot(k, old) 
-        else: dota = [{old[:-1] : val}]
-        return dota
-    
-    def child_ref(self, instances):
-        if not isinstance(instances, list): instances = [instances]
-        uuids = [i.uuid for i in instances]
-        if self.itype != 'session': uuids += [r for i in instances for r in i._ref]
-        self.backend.update_one( {"uuid":self.uuid}, {"$addToSet" : {"_ref" : {"$each" : uuids}} })
-        self.sync()
 
     def related(self,lvl=1): return self.backend.find({"uuid":{"$in":self.related_uuid(lvl)}})
 
@@ -69,46 +53,70 @@ class Instance():
 
 ##    def validate(self): Draft7Validator(schema[self.itype]).validate(self.doc())
 
-    def verify_data(self, instances):
-        if type(instances) is not list: instances = [instances]
-        instances = list(dict.fromkeys(instances))
-        if len(instances)==0: raise ValueError("data cannot be empty")
-        if not all(map(lambda x: x in [Attribute, Object], [type(i) for i in instances])):
-            raise TypeError("data must be of type tahoe Attribute or Object")
+    def verified_instances(self, instances, type_list):
+        if not isinstance(instances, list): instances = [instances]
+        instances = list(set(instances))
+        if len(instances)==0: raise ValueError("instances cannot be empty")
+        if not all(map(lambda x: x in type_list, [type(i) for i in instances])):
+            raise TypeError("instances must be of type tahoe " + str(type_list))
         return instances
 
     
 class Raw(Instance):
-    def __init__(self, raw_type, data, orgid=None, timestamp=None, timezone="UTC", backend=NoBackend()):
+    def __init__(self, raw_type, data, orgid, timezone="UTC", **kwargs):
         if isinstance(data, str): data = json.loads(data)
-        self.itype, self.raw_type, self.data, self.orgid, self.timestamp, self.timezone = 'raw', raw_type, data, orgid, timestamp, timezone
-        super().__init__(backend)        
+        self.itype, self.raw_type, self.data = 'raw', raw_type, data
+        self.orgid, self.timezone = orgid, timezone
+        super().__init__(**kwargs)
 
+    def duplicate(self): return self.backend.find_one({"itype":self.itype, "data":self.data})
 
+        
 class Session(Instance):
-    def __init__(self, session_type, data, _ref=[], backend=NoBackend()):
-        self.itype, self.session_type, self._ref, self.backend = 'session', session_type, _ref, backend
-        data = self.verify_data(data)
-        self.data = [obj.get_data() for obj in data]
-        super().__init__(backend)
-        self.child_ref(data)
-
+    def __init__(self, session_type, identifiers=[], **kwargs):
+        self.itype, self.session_type = 'session', session_type
+        identifiers = self.verified_instances(identifiers, [Attribute, Object])
+        self.identifiers = [i.get_data() for i in identifiers]
+        self._ref = [i.uuid for i in identifiers]
+        super().__init__(**kwargs)
+    
     def __iter__(self): return iter( self.backend.find({"uuid":{"$in" : self._ref}, "itype":"event"}))
 
-    def events(self, p={"_id":0}): return self.backend.find({"uuid":{"$in" : self._ref}, "itype":"event"}, p)
-        
-    def add_event(self, new_events): self.child_ref(new_events)
+    def duplicate(self): return self.backend.find_one({"itype":self.itype, "identifiers":self.identifiers})
 
-    
-class Event(Instance):
-    def __init__(self, event_type, orgid, data, timestamp, malicious=False, backend=NoBackend()):
-        self.itype, self.event_type, self.orgid, self.timestamp, self.malicious = 'event', event_type, orgid, timestamp, malicious
-        data = self.verify_data(data)        
-        self.data = [i.get_data() for i in data]
-        super().__init__(backend)
-        self.child_ref(data)
+##    def __hash__(self): return hash((self.itype, tuple(self.data)))
+
+    def events(self, p={"_id":0}):
+        return self.backend.find({"uuid":{"$in" : self._ref}, "itype":"event"}, p)
+        
+    def add_event(self, events):
+        events = self.verified_instances(events, [Event])
+        self._ref = self._ref + [i.uuid for i in events]
+        self.backend.update_one( {"uuid":self.uuid}, {"$set":{"_ref":self._ref}})
+
+
+class OE(Instance):
+    def __init__(self, data, **kwargs):
+        data = self.verified_instances(data, [Attribute, Object])
+        self.data = [i.get_data() for i in data] 
+
+        c_ref = [i.uuid for i in data]
+        gc_ref = [r for i in data if type(i) != Attribute for r in i._ref]
+        self._ref = sorted(list(set(c_ref + gc_ref)))
+        super().__init__(**kwargs)
 
     def __iter__(self): return iter(self.backend.find({"uuid":{"$in" : self._ref}}))
+
+    
+class Event(OE):
+    def __init__(self, event_type, data, orgid, timestamp, malicious=False, **kwargs):
+        self.itype, self.event_type, self.orgid = 'event', event_type, orgid
+        self.timestamp, self.malicious = timestamp, malicious
+        super().__init__(data, **kwargs)
+
+##    def duplicate(self): return self.backend.find_one({"itype":"event", "event_type":self.event_type, "_ref":{"$size":len(self._ref),"$all":self._ref}})
+
+    def duplicate(self): return self.backend.find_one({"itype":"event", "event_type":self.event_type, "_ref":self._ref})
 
     def sessions(self, p={"_id":0}): return super().parents({"itype":"session"},p)
 
@@ -120,40 +128,43 @@ class Event(Instance):
         return uuids
 
 
-class Object(Instance):
-    def __init__(self, obj_type, data, backend=NoBackend()):
+class Object(OE):
+    def __init__(self, obj_type, data, **kwargs):
         self.itype, self.obj_type = 'object', obj_type
-        data = self.verify_data(data)
-        self.data = [i.get_data() for i in data]
-        super().__init__(backend)
-        self.child_ref(data)
-    
-    def __iter__(self): return iter(self.backend.find({"uuid":{"$in" : self._ref}}))
+        super().__init__(data, **kwargs)
+
+    def duplicate(self): return self.backend.find_one({"itype":"object", "obj_type":self.obj_type, "_ref":self._ref})
 
     def events(self, p={"_id":0}): return super().parents({"itype":"event"},p)
 
     def get_data(self): return {self.obj_type : self.data}
 
 
-class Attribute(Instance):
-    def __init__(self, att_type, data, backend=NoBackend(), uuid=None):
-        self.itype, self.att_type, self.data = 'attribute', att_type, data
-        if uuid: self.uuid = uuid
-        super().__init__(backend)
-        self.create_alias()
+class Attribute(Instance):   
+    def __init__(self, att_type, value, uuid=None, alias=[], **kwargs):
+        self.itype, self.att_type, self.uuid = 'attribute', att_type, uuid 
+        if size(value) > 999: self.value, self.large_value = "large_value", value
+        else: self.value = value
+        super().__init__(**kwargs)
+        self.create_alias(alias)
 
-    def create_alias(self):
-        att_type_lst = _ATT_ALIAS.get(self.att_type)
-        if not att_type_lst: return
-        if not isinstance(att_type_lst, list): att_type_lst = [att_type_lst]
-        for att_type in att_type_lst: Attribute(att_type, self.data, backend=self.backend, uuid = self.uuid)
+    def create_alias(self, alias):
+        atl = alias + _ATT_ALIAS.get(self.att_type,[])
+        if not atl: return
+        for at in atl: Attribute(at, self.value, uuid=self.uuid, backend=self.backend)
+
+    def duplicate(self):
+        q = {"att_type":self.att_type, "value":self.value}
+        if self.value == "large_value": q.update({"large_value":self.large_value})
+        return self.backend.find_one(q)
 
     def events(self, p={"_id":0}): return super().parents({"itype":"event"},p)
 
-    def get_data(self): return {self.att_type : self.data}
+    def get_data(self): return {self.att_type : self.value}
 
     def objects(self, p={"_id":0}): return super().parents({"itype":"object"},p)
     
+
 
 def parse(instance, backend=NoBackend(), validate=True):
     backend = get_backend() if os.getenv("_MONGO_URL") else backend
@@ -161,7 +172,8 @@ def parse(instance, backend=NoBackend(), validate=True):
     instance.pop("_id", None)
     t = Attribute('text', 'mock')
     t.__dict__, t.backend = instance, backend
-    t.__class__ = {'attribute':Attribute, 'event':Event, 'object':Object, 'raw':Raw, 'session':Session}.get(instance['itype'])
+    t.__class__ = {'attribute':Attribute, 'event':Event, 'object':Object,
+                   'raw':Raw, 'session':Session}.get(instance['itype'])
 ##    if validate: t.validate()
     return t
 
@@ -297,14 +309,14 @@ def example1():
     
     timestamp = data["@timestamp"]
     timestamp = dt.fromisoformat(timestamp.replace("Z", "+00:00")).timestamp()
-    e = Event('file_download', 'identity--61de9cc8-d015-4461-9b34-d2fb39f093fb',
-              [url_att, file_obj], timestamp, backend=db)
+    e = Event('file_download', [url_att, file_obj],
+              'identity--61de9cc8-d015-4461-9b34-d2fb39f093fb', timestamp, backend=db)
 
     pprint(e.doc())
     print("\n")
 
-    e2 = Event('test', 'identity--61de9cc8-d015-4461-9b34-d2fb39f093fb',
-               [url2_att, ipv4_att], timestamp, backend=db)
+    e2 = Event('test', [url2_att, ipv4_att],
+               'identity--61de9cc8-d015-4461-9b34-d2fb39f093fb', timestamp, backend=db)
     
     hostname = data['host']['name']
     hostname_att = Attribute('hostname', hostname, backend=db)
@@ -329,6 +341,7 @@ def example1():
     print("\n")
 
     try:
+##        pdb.set_trace()
         uu = url_att.related_uuid(lvl=1)
         for i in uu: print(i)
     except Exception as e: logging.error("Uh oh ", exc_info=True)
