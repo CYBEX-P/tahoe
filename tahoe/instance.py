@@ -1,6 +1,7 @@
 from jsonschema import Draft7Validator
 from uuid import uuid4
 from sys import getsizeof as size
+from collections import defaultdict
 import json, pdb, os, pytz, pathlib, logging, time
 
 if __name__ == "__main__": from backend import get_backend, Backend, MongoBackend, NoBackend
@@ -16,13 +17,12 @@ class Instance():
         if type(self.backend) == NoBackend and os.getenv("_MONGO_URL"): self.backend = get_backend()
         if kwargs.get('backend'): self.backend = kwargs.get('backend') 
         if not isinstance(self.backend, Backend):
-            raise TypeError('Backend cannot be of type ' + str(type(backend)))
+            raise TypeError('backend cannot be of type ' + str(type(backend)))
 
         dup = self.duplicate()
         if dup: [setattr(self,k,v) for k,v in dup.items()]
         else: 
-            if not hasattr(self, 'uuid') or not self.uuid:
-                self.uuid = self.itype + '--' + str(uuid4())
+            if not hasattr(self, 'uuid') or not self.uuid: self.uuid = self.itype + '--' + str(uuid4())
             self.backend.insert_one(self.doc())
 ##      self.validate()        
 
@@ -32,7 +32,11 @@ class Instance():
 
     def json(self): return json.dumps(self.doc())
 
-    def related(self,lvl=1): return self.backend.find({"uuid":{"$in":list(set(self.related_uuid(lvl)))}})
+    def related(self, lvl=1, itype=None, p={"_id":0}):
+        rel_uuid = list(set(self.related_uuid(lvl)))
+        q = {"uuid": {"$in": rel_uuid}}
+        if itype: q.update({"itype":itype})
+        return self.backend.find(q, p)
 
     def related_uuid(self, lvl, v=[]):
         uuids = []
@@ -42,8 +46,6 @@ class Instance():
         return uuids
 
     def parents(self, q={}, p={"_id":0}): return self.backend.find({**{"_ref":self.uuid}, **q}, p)
-
-    def sync(self): self._ref = self.backend.find_one({"uuid" : self.uuid})["_ref"]
 
 ##    def validate(self): Draft7Validator(schema[self.itype]).validate(self.doc())
 
@@ -69,7 +71,10 @@ class Raw(Instance):
 class OES(Instance):
     def __init__(self, data, **kwargs):
         data = self.verified_instances(data, [Attribute, Object])
-        self.data = [i.get_data() for i in data] 
+        d = defaultdict(list)
+        for i in data:
+            for k,v in i.get_data().items(): d[k] += v
+        self.data = dict(d)
 
         c_ref = [i.uuid for i in data]
         gc_ref = [r for i in data if type(i) != Attribute for r in i._ref]
@@ -103,13 +108,13 @@ class Event(OES):
 
     def duplicate(self): return self.backend.find_one({"event_type":self.event_type, "_ref":self._ref})
 
-    def sessions(self, p={"_id":0}): return super().parents({"itype":"session"},p)
+    def sessions(self, p={"_id":0}): return self.backend.find({"_eref":self.uuid}, p)
 
     def related_uuid(self, lvl=0, v=[]):
         uuids = self._ref + [self.uuid]
         if lvl == 0: return uuids
         for s in self.sessions({"itype":1,"uuid":1,"_eref":1}):
-            uuids += parse(s, self.backend).related_uuid(lvl,v+[self.uuid])
+            uuids += parse(s, self.backend).related_uuid(lvl, v+[self.uuid])
         return uuids
 
 
@@ -122,7 +127,7 @@ class Object(OES):
 
     def events(self, p={"_id":0}): return super().parents({"itype":"event"},p)
 
-    def get_data(self): return {self.obj_type : self.data}
+    def get_data(self): return {self.obj_type : [self.data]}
 
 
 class Attribute(Instance):   
@@ -145,7 +150,7 @@ class Attribute(Instance):
 
     def events(self, p={"_id":0}): return super().parents({"itype":"event"},p)
 
-    def get_data(self): return {self.att_type : self.value}
+    def get_data(self): return {self.att_type : [self.value]}
 
     def objects(self, p={"_id":0}): return super().parents({"itype":"object"},p)
     
@@ -300,7 +305,10 @@ def example1():
     pprint(e.doc())
     print("\n")
 
-    e2 = Event('test', [url2_att, ipv4_att],
+    ip_att2 = Attribute("ipv4", "2.2.2.2", backend=db)
+    ip_obj = Object("ipv4", [ipv4_att], backend=db)
+
+    e2 = Event('test', [url2_att, ipv4_att, ip_att2, ip_obj],
                'identity--61de9cc8-d015-4461-9b34-d2fb39f093fb', timestamp, backend=db)
     
     hostname = data['host']['name']
