@@ -9,7 +9,6 @@ else: from .backend import get_backend, Backend, MongoBackend, NoBackend
 
 ##schema = {k : json.loads(open(((__file__[:-11]+ "schema\\%s.json") %k)).read()) for k in ["attribute","object","event","session","raw"]}
 _ATT_ALIAS = {"ipv4":["ip"], "ipv6":["ip"], "md5":["hash"], "sha256":["hash"]}
-
 class Instance():
     backend = get_backend() if os.getenv("_MONGO_URL") else NoBackend()
     
@@ -47,14 +46,19 @@ class Instance():
 
     def parents(self, q={}, p={"_id":0}): return self.backend.find({**{"_ref":self.uuid}, **q}, p)
 
+    def update(self, update):
+        for k,v in update.items(): setattr(self, k, v)
+        self.backend.update_one({"uuid" : self.uuid}, {"$set" : update})
+
 ##    def validate(self): Draft7Validator(schema[self.itype]).validate(self.doc())
 
     def verified_instances(self, instances, type_list):
         if not isinstance(instances, list): instances = [instances]
         instances = list(set(instances))
         if len(instances)==0: raise ValueError("instances cannot be empty")
-        if not all(map(lambda x: x in type_list, [type(i) for i in instances])):
-            raise TypeError("instances must be of type tahoe " + str(type_list))
+        for i in instances:
+            if not any([isinstance(i, t) for t in type_list]):
+                raise TypeError("instances must be of type tahoe " + " or ".join([str(t) for t in type_list]))
         return instances
 
     
@@ -77,7 +81,7 @@ class OES(Instance):
         self.data = dict(d)
 
         c_ref = [i.uuid for i in data]
-        gc_ref = [r for i in data if type(i) != Attribute for r in i._ref]
+        gc_ref = [r for i in data if not isinstance(i, Attribute) for r in i._ref]
         self._ref = sorted(list(set(c_ref + gc_ref)))
         super().__init__(**kwargs)
 
@@ -138,9 +142,14 @@ class Attribute(Instance):
         super().__init__(**kwargs)
         self.create_alias(alias)
 
+    def count(self, start=0, end=None):
+        if not end: end = time.time()
+        return self.backend.count({"itype":"event", "_ref":self.uuid, "timestamp":{"$gte":start, "$lte":end}})
+
     def create_alias(self, alias):
         atl = alias + _ATT_ALIAS.get(self.att_type,[])
         if not atl: return
+        if alias: pdb.set_trace()
         for at in atl: Attribute(at, self.value, uuid=self.uuid, backend=self.backend)
 
     def duplicate(self):
