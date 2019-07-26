@@ -8,7 +8,34 @@ if __name__ == "__main__": from backend import get_backend, Backend, MongoBacken
 else: from .backend import get_backend, Backend, MongoBackend, NoBackend
 
 ##schema = {k : json.loads(open(((__file__[:-11]+ "schema\\%s.json") %k)).read()) for k in ["attribute","object","event","session","raw"]}
-_ATT_ALIAS = {"ipv4":["ip"], "ipv6":["ip"], "md5":["hash"], "sha256":["hash"]}
+_ATT_ALIAS = {
+    "asn":["AS"],
+    "btc":["cryptocurrency_address"],
+    "comment":["text"],
+    "creation_date":["date"],
+    "cve_id":["vulnerability"],
+    "hex_data":["data"],
+    "imphash":["hash", "checksum"],
+    "md5":["hash", "checksum"],
+    "pattern":["data"],
+    "pdb":["filepath"],
+    "pehash":["hash", "checksum"],
+    "premium_rate_telephone_number":["prtn phone_number"],
+    "sha1":["hash", "checksum"],
+    "sha224":["hash", "checksum"],
+    "sha256":["hash", "checksum"],
+    "sha384":["hash", "checksum"],
+    "sha512":["hash", "checksum"],
+    "sha512/224":["hash", "checksum"],
+    "sha512/256":["hash", "checksum"],
+    "sigma":["siem"],
+    "snort":["nids"],
+    "ssdeep":["hash", "checksum"],
+    "url":["uri"],
+    "user_agent":["http_user_agent"],
+    "yara":["nids"]
+}
+
 class Instance():
     backend = get_backend() if os.getenv("_MONGO_URL") else NoBackend()
     
@@ -30,6 +57,15 @@ class Instance():
     def doc(self): return {k:v for k,v in vars(self).items() if v is not None and k not in ['backend','schema']}
 
     def json(self): return json.dumps(self.doc())
+
+    def json_dot(self, val, old = ""):
+        dota = []
+        if isinstance(val, dict):
+            for k in val.keys(): dota += self.json_dot(val[k], old + str(k) + ".") 
+        elif isinstance(val, list):
+            for k in val: dota += self.json_dot(k, old) 
+        else: dota = [{old[:-1] : val}]
+        return dota
 
     def related(self, lvl=1, itype=None, p={"_id":0}):
         rel_uuid = list(set(self.related_uuid(lvl)))
@@ -68,8 +104,14 @@ class Raw(Instance):
         self.itype, self.raw_type, self.data = 'raw', raw_type, data
         self.orgid, self.timezone = orgid, timezone
         super().__init__(**kwargs)
-
+        
     def duplicate(self): return self.backend.find_one({"itype":self.itype, "data":self.data})
+
+    def update_ref(self, ref_uuid_list):
+        if hasattr(self, "_ref"): self._ref = self._ref + ref_uuid_list
+        else: self._ref = ref_uuid_list
+        self._ref = sorted(list(set(self._ref)))
+        self.backend.update_one({"uuid":self.uuid}, {"$set":{"_ref":self._ref}})
 
 
 class OES(Instance):
@@ -78,7 +120,7 @@ class OES(Instance):
         d = defaultdict(list)
         for i in data:
             for k,v in i.get_data().items(): d[k] += v
-        self.data = dict(d)
+        self.data = dict(d)        
 
         c_ref = [i.uuid for i in data]
         gc_ref = [r for i in data if not isinstance(i, Attribute) for r in i._ref]
@@ -137,7 +179,7 @@ class Object(OES):
 class Attribute(Instance):   
     def __init__(self, att_type, value, uuid=None, alias=[], **kwargs):
         self.itype, self.att_type, self.uuid = 'attribute', att_type, uuid 
-        if size(value) > 999: self.value, self.large_value = "large_value", value
+        if size(value) > 999: self.value, self.large_value = "^_large_value_$", value
         else: self.value = value
         super().__init__(**kwargs)
         self.create_alias(alias)
@@ -149,17 +191,21 @@ class Attribute(Instance):
     def create_alias(self, alias):
         atl = alias + _ATT_ALIAS.get(self.att_type,[])
         if not atl: return
-        if alias: pdb.set_trace()
-        for at in atl: Attribute(at, self.value, uuid=self.uuid, backend=self.backend)
+        value = self.value if self.value != "^_large_value_$" else self.large_value
+        for at in atl: Attribute(at, value, uuid=self.uuid, backend=self.backend)
 
     def duplicate(self):
         q = {"att_type":self.att_type, "value":self.value}
-        if self.value == "large_value": q.update({"large_value":self.large_value})
+        if self.value == "^_large_value_$":
+            q.update({"large_value":self.large_value})
         return self.backend.find_one(q)
 
     def events(self, p={"_id":0}): return super().parents({"itype":"event"},p)
 
-    def get_data(self): return {self.att_type : [self.value]}
+    def get_data(self):
+        d = {self.att_type : [self.value]}
+        if self.value == "^_large_value_$": d["large_value"] = [self.large_value]
+        return d
 
     def objects(self, p={"_id":0}): return super().parents({"itype":"object"},p)
     
@@ -343,14 +389,14 @@ def example1():
     print("\n")
 
     d1, d2, d3 = 0, 0, 0
-    n = 100
+    n = 10
     for i in range(n):
         t1 = time.time()
-        uu = url_att.related_uuid(lvl=1)
+        uu = url_att.related(lvl=1)
         t2 = time.time()
-        uu = url_att.related_uuid(lvl=2)
+        uu = url_att.related(lvl=2)
         t3 = time.time()
-        uu = url_att.related_uuid(lvl=3)
+        uu = url_att.related(lvl=3)
         t4 = time.time()
 
         d1 += t2-t1
@@ -359,7 +405,7 @@ def example1():
 
     print(d1/n, d2/n, d3/n)
 
-    for i in url_att.related(lvl=20): print(i["uuid"])
+    for i in url_att.related(lvl=3): print(i["uuid"])
         
     pdb.set_trace()
     

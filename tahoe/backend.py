@@ -15,6 +15,7 @@ class NoBackend(Backend):
 class MongoBackend(Backend):
     def __init__(self, db): self.coll = db.instances
     def aggregate(self, *args, **kwargs): return self.coll.aggregate(*args, **kwargs)
+    def count(self, *args, **kwargs): return self.coll.count(*args, **kwargs)
     
     def find(self, query, projection={"_id" : 0}, *args, **kwargs):
         r = self.coll.find(query, projection, *args, **kwargs)
