@@ -1,4 +1,5 @@
 from pymongo import MongoClient
+from pymongo.collection import Collection
 import os
 
 class Backend():
@@ -12,31 +13,24 @@ class Backend():
 class NoBackend(Backend):
     def __init__(self): super().__init__()
 
-class MongoBackend(Backend):
-    def __init__(self, db): self.coll = db.instances
-    def aggregate(self, *args, **kwargs): return self.coll.aggregate(*args, **kwargs)
-    def count(self, *args, **kwargs): return self.coll.count(*args, **kwargs)
+class MongoBackend(Collection, Backend):
+    def __init__(self, database, name="instances", create=False, **kwargs):
+        self.coll = database.get_collection(name)
+        Backend.__init__(self)
+        Collection.__init__(self, database, name,  create, **kwargs)
+        
+##    def find(self, query, projection={"_id" : 0}, *args, **kwargs):
+##        return self.coll.find(query, projection, *args, **kwargs)
     
-    def find(self, query, projection={"_id" : 0}, *args, **kwargs):
-        r = self.coll.find(query, projection, *args, **kwargs)
-        if not r: pdb.set_trace()
-        return {} if not r else r
-    
-    def find_one(self, query, projection={"_id" : 0}): return self.coll.find_one(query, projection)
-    
-    def insert_many(self, *args, **kwargs): self.coll.insert_many(*args, **kwargs)
-    def insert_one(self, *args, **kwargs): self.coll.insert_one(*args, **kwargs)
-    def replace_one(self, *args, **kwargs): self.coll.replace_one(*args, **kwargs)
-    def update_many(self, *args, **kwargs): self.coll.update_many(*args, **kwargs)
-    def update_one(self, *args, **kwargs): self.coll.update_one(*args, **kwargs)
-    
+##    def find_one(self, query, projection={"_id" : 0}): return self.coll.find_one(query, projection)
+
 
 def get_backend():
     mongo_url = os.getenv("_MONGO_URL")
-    analytics_db = os.getenv("_ANALYTICS_DB", "tahoe_db")
-    analytics_coll = os.getenv("_ANALYTICS_COLL", "instances")
+    db = os.getenv("_TAHOE_DB", "tahoe_db")
+    coll = os.getenv("_TAHOE_COLL", "instances")
 
     client = MongoClient(mongo_url)
-    analytics_db = client.get_database(analytics_db)
-    analytics_backend = MongoBackend(analytics_db)
-    return analytics_backend
+    db = client.get_database(db)
+    backend = MongoBackend(db)
+    return backend

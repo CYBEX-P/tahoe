@@ -4,7 +4,7 @@ from sys import getsizeof as size
 from collections import defaultdict
 import json, pdb, os, pytz, pathlib, logging, time
 
-if __name__ == "__main__": from backend import get_backend, Backend, MongoBackend, NoBackend
+if __name__ in ["__main__", "instance"]: from backend import get_backend, Backend, MongoBackend, NoBackend
 else: from .backend import get_backend, Backend, MongoBackend, NoBackend
 
 ##schema = {k : json.loads(open(((__file__[:-11]+ "schema\\%s.json") %k)).read()) for k in ["attribute","object","event","session","raw"]}
@@ -16,11 +16,13 @@ _ATT_ALIAS = {
     "cve_id":["vulnerability"],
     "hex_data":["data"],
     "imphash":["hash", "checksum"],
+    "ipv4":["ip"],
+    "ipv6":["ip"],
     "md5":["hash", "checksum"],
     "pattern":["data"],
     "pdb":["filepath"],
     "pehash":["hash", "checksum"],
-    "premium_rate_telephone_number":["prtn phone_number"],
+    "premium_rate_telephone_number":["prtn", "phone_number"],
     "sha1":["hash", "checksum"],
     "sha224":["hash", "checksum"],
     "sha256":["hash", "checksum"],
@@ -54,19 +56,22 @@ class Instance():
 
     def __str__(self): return self.json()
 
+    def branch(self, val, old=[]):
+        b = []
+        if isinstance(val, dict):
+            for k in val: b += self.branch(val[k], old+[str(k)])
+        elif isinstance(val, list):
+            for k in val: b += self.branch(k, old)
+        else: b.append(old + [val])
+        return b
+
     def doc(self): return {k:v for k,v in vars(self).items() if v is not None and k not in ['backend','schema']}
 
     def json(self): return json.dumps(self.doc())
 
-    def json_dot(self, val, old = ""):
-        dota = []
-        if isinstance(val, dict):
-            for k in val.keys(): dota += self.json_dot(val[k], old + str(k) + ".") 
-        elif isinstance(val, list):
-            for k in val: dota += self.json_dot(k, old) 
-        else: dota = [{old[:-1] : val}]
-        return dota
-
+    def json_dot(self, data, old = ""):
+        return [{old + ".".join(i[:-1]) : i[-1]} for i in self.branch(data)]
+        
     def related(self, lvl=1, itype=None, p={"_id":0}):
         rel_uuid = list(set(self.related_uuid(lvl)))
         q = {"uuid": {"$in": rel_uuid}}
@@ -80,7 +85,8 @@ class Instance():
             uuids += parse(e, self.backend, False).related_uuid(lvl-1,v)
         return uuids
 
-    def parents(self, q={}, p={"_id":0}): return self.backend.find({**{"_ref":self.uuid}, **q}, p)
+    def parents(self, q={}, p={"_id":0}):
+        return self.backend.find({**{"_ref":self.uuid}, **q}, p)
 
     def update(self, update):
         for k,v in update.items(): setattr(self, k, v)
@@ -105,7 +111,7 @@ class Raw(Instance):
         self.orgid, self.timezone = orgid, timezone
         super().__init__(**kwargs)
         
-    def duplicate(self): return self.backend.find_one({"itype":self.itype, "data":self.data})
+    def duplicate(self): return self.backend.find_one({"$and":self.json_dot(self.data, "data.")})
 
     def update_ref(self, ref_uuid_list):
         if hasattr(self, "_ref"): self._ref = self._ref + ref_uuid_list
@@ -128,6 +134,15 @@ class OES(Instance):
         super().__init__(**kwargs)
 
     def __iter__(self): return iter(self.backend.find({"uuid":{"$in" : self._ref}}))
+
+    def feature(self):
+        branches = self.branch(self.data)
+        r = defaultdict(list)
+        for b in branches:
+            k, v = b[:-1], b[-1]
+            for i in range(len(k)):
+                r['.'.join(k[-i:])].append(v)
+        return dict(r)    
 
         
 class Session(OES):
@@ -171,7 +186,7 @@ class Object(OES):
 
     def duplicate(self): return self.backend.find_one({"obj_type":self.obj_type, "_ref":self._ref})
 
-    def events(self, p={"_id":0}): return super().parents({"itype":"event"},p)
+    def events(self, p={"_id":0}): return self.parents({"itype":"event"},p)
 
     def get_data(self): return {self.obj_type : [self.data]}
 
@@ -187,7 +202,7 @@ class Attribute(Instance):
     def count(self, start=0, end=None):
         if not end: end = time.time()
         return self.backend.count({"itype":"event", "_ref":self.uuid, "timestamp":{"$gte":start, "$lte":end}})
-
+        
     def create_alias(self, alias):
         atl = alias + _ATT_ALIAS.get(self.att_type,[])
         if not atl: return
@@ -200,23 +215,22 @@ class Attribute(Instance):
             q.update({"large_value":self.large_value})
         return self.backend.find_one(q)
 
-    def events(self, p={"_id":0}): return super().parents({"itype":"event"},p)
+    def events(self, p={"_id":0}): return self.parents({"itype":"event"},p)
 
     def get_data(self):
         d = {self.att_type : [self.value]}
         if self.value == "^_large_value_$": d["large_value"] = [self.large_value]
         return d
 
-    def objects(self, p={"_id":0}): return super().parents({"itype":"object"},p)
+    def objects(self, p={"_id":0}): return self.parents({"itype":"object"},p)
     
 
 
 def parse(instance, backend=NoBackend(), validate=True):
-    backend = get_backend() if os.getenv("_MONGO_URL") else backend
     if isinstance(instance, str): instance = json.loads(instance)
     instance.pop("_id", None)
     t = Attribute('text', 'mock')
-    t.__dict__, t.backend = instance, backend
+    t.__dict__ = instance
     t.__class__ = {'attribute':Attribute, 'event':Event, 'object':Object,
                    'raw':Raw, 'session':Session}.get(instance['itype'])
 ##    if validate: t.validate()
@@ -389,7 +403,7 @@ def example1():
     print("\n")
 
     d1, d2, d3 = 0, 0, 0
-    n = 10
+    n = 1
     for i in range(n):
         t1 = time.time()
         uu = url_att.related(lvl=1)
@@ -406,6 +420,8 @@ def example1():
     print(d1/n, d2/n, d3/n)
 
     for i in url_att.related(lvl=3): print(i["uuid"])
+
+    print(e.feature())
         
     pdb.set_trace()
     
@@ -423,6 +439,7 @@ def example2():
     for i in r:
         pprint(i)
     rr = r
+
     
 
 
