@@ -167,6 +167,15 @@ class Event(OES):
         self.timestamp, self.malicious = timestamp, malicious
         super().__init__(data, **kwargs)
 
+    def delete(self):
+        # delete self
+        # delete self.uuid from all session._ref
+        # delete all attribute in self._ref if attribute.parents().count == 0
+        # delete all object in self._ref if object.parents().count == 0
+        # delete raw._ref s.t. self.uuid in raw._ref
+        # delete raw.filters s.t. self.uuid in raw._ref if len(raw.filters) == 1 else ??
+        pass
+
     def duplicate(self): return self.backend.find_one({"event_type":self.event_type, "_ref":self._ref})
 
     def sessions(self, p={"_id":0}): return self.backend.find({"_eref":self.uuid}, p)

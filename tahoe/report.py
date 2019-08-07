@@ -27,15 +27,13 @@ class Report():
             raise TypeError('backend cannot be of type ' + str(type(backend)))
 
     def attribute_types(self, count=True):
-        if not count:
-            l = self.backend.distinct("att_type", {"itype":"attribute"})
-            return sorted(l)
+        b = self.backend
+        if not count: return sorted(b.distinct("att_type", {"itype":"attribute"}))
         
-        pipeline = [{ "$match" : { "itype" : "attribute" } },
-                    { "$group" : { "_id" : "$att_type", "count" : {"$sum" : 1}}}]
-        r = self.backend.aggregate(pipeline)
-        d = {i["_id"] : i["count"] for i in r}
-        return dict(sorted(d.items()))
+        p = [{"$match":{"itype":"attribute"}},
+             {"$group":{"_id":"$att_type", "count":{"$sum":1}}}]
+        r = b.aggregate(p)
+        return dict(sorted({i["_id"] : i["count"] for i in r}.items()))
 
     def attribute_values(self, att_type, count=False):
         q = {"itype":"attribute","att_type":att_type}
@@ -48,21 +46,29 @@ class Report():
         for i in r:
             q = {"itype":"event", "_ref":i["uuid"]}
             d[i["value"]] = self.backend.count_documents(q, limit=_LIM)
-        return dict(sorted(d.items()))        
-    
-    def event_types(self, count=True):
-        if not count:
-            l = self.backend.distinct("event_type", {"itype":"event"})
-            return sorted(l)
-        
-        pipeline = [{ "$match" : { "itype" : "event" } },
-                    { "$group" : { "_id" : "$event_type", "count" : {"$sum" : 1}}}]
-        r = self.backend.aggregate(pipeline)
-        d = {i["_id"] : i["count"] for i in r}
         return dict(sorted(d.items()))
 
-    def events(self, limit, skip):
-        return self.backend.find({"itype":"event"}, limit=limit, skip=skip*limit)
+    def event_features(self, limit, page_no):
+        events = self.events(limit, skip=page_no*limit)
+
+        d = {}
+        for e in events:
+            e = parse(e)
+            d[e.uuid] = e.feature()
+        return d           
+    
+    def event_types(self, count=True):
+        b = self.backend
+        if not count: return sorted(b.distinct("event_type", {"itype":"event"}))
+        
+        p = [{"$match":{"itype":"event"} },
+             {"$group":{"_id":"$event_type", "count":{"$sum":1}}}]
+        r = b.aggregate(p)
+        return dict(sorted({i["_id"] : i["count"] for i in r}.items()))
+
+    def events(self, limit=100, skip=0):
+        return self.backend.find({"itype":"event"}, limit=limit, skip=skip)
+
     
 
 
