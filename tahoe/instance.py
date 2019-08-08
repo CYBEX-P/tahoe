@@ -2,7 +2,7 @@ from jsonschema import Draft7Validator
 from uuid import uuid4
 from sys import getsizeof as size
 from collections import defaultdict
-import json, pdb, os, pytz, pathlib, logging, time
+import json, pdb, os, pytz, pathlib, logging, time, hashlib
 
 if __name__ in ["__main__", "instance"]: from backend import get_backend, Backend, MongoBackend, NoBackend
 else: from .backend import get_backend, Backend, MongoBackend, NoBackend
@@ -42,7 +42,8 @@ class Instance():
     backend = get_backend() if os.getenv("_MONGO_URL") else NoBackend()
     
     def __init__(self, **kwargs):
-        if type(self.backend) == NoBackend and os.getenv("_MONGO_URL"): self.backend = get_backend()
+        if type(self.backend) == NoBackend and os.getenv("_MONGO_URL"):
+            self.backend = get_backend()
         if kwargs.get('backend'): self.backend = kwargs.get('backend') 
         if not isinstance(self.backend, Backend):
             raise TypeError('backend cannot be of type ' + str(type(backend)))
@@ -50,7 +51,8 @@ class Instance():
         dup = self.duplicate()
         if dup: [setattr(self,k,v) for k,v in dup.items()]
         else: 
-            if not hasattr(self, 'uuid') or not self.uuid: self.uuid = self.itype + '--' + str(uuid4())
+            if not hasattr(self, 'uuid') or not self.uuid:
+                self.uuid = self.itype + '--' + str(uuid4())
             self.backend.insert_one(self.doc())
 ##      self.validate()        
 
@@ -109,9 +111,11 @@ class Raw(Instance):
         if isinstance(data, str): data = json.loads(data)
         self.itype, self.raw_type, self.data = 'raw', raw_type, data
         self.orgid, self.timezone = orgid, timezone
+        d = json.dumps(data, sort_keys=True)
+        self._hash = hashlib.md5(d.encode('utf-8')).hexdigest()
         super().__init__(**kwargs)
         
-    def duplicate(self): return self.backend.find_one({"$and":self.json_dot(self.data, "data.")})
+    def duplicate(self): return self.backend.find_one({"itype":"raw","_hash":self._hash})
 
     def update_ref(self, ref_uuid_list):
         if hasattr(self, "_ref"): self._ref = self._ref + ref_uuid_list
@@ -339,7 +343,7 @@ def example1():
     from pymongo import MongoClient
     URI = 'mongodb://localhost:27017'
     client = MongoClient(URI)
-    db = MongoBackend(client.tahoe_demo)
+    db = MongoBackend(client.tahoe_db)
 
     data = json.loads(j)
 
