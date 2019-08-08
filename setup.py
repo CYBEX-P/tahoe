@@ -5,7 +5,7 @@ with open("README.md", "r") as fh:
 
 setuptools.setup(
     name="tahoe",
-    version="0.0.1",
+    version="0.3",
     author="Farhan Sadique",
     author_email="qclass@protonmail.com",
     description="Cyber Threat Information Sharing Language",

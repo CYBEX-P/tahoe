@@ -48,6 +48,10 @@ class Instance():
         if not isinstance(self.backend, Backend):
             raise TypeError('backend cannot be of type ' + str(type(backend)))
 
+        self.sub_type = kwargs.pop("sub_type")
+        unique = self.itype + self.sub_type + self.serialize(self.data)
+        self._hash = hashlib.sha256(unique.encode('utf-8')).hexdigest()
+        
         dup = self.duplicate()
         if dup: [setattr(self,k,v) for k,v in dup.items()]
         else: 
@@ -68,6 +72,8 @@ class Instance():
         return b
 
     def doc(self): return {k:v for k,v in vars(self).items() if v is not None and k not in ['backend','schema']}
+
+    def duplicate(self): return self.backend.find_one({"_hash" : self._hash})
 
     def json(self): return json.dumps(self.doc())
 
@@ -90,6 +96,16 @@ class Instance():
     def parents(self, q={}, p={"_id":0}):
         return self.backend.find({**{"_ref":self.uuid}, **q}, p)
 
+    def serialize(self, val):
+        if isinstance(val, dict):
+            r = {k : self.serialize(v) for k,v in val.items()}
+            return str(dict(sorted(r.items())))
+        elif isinstance(val, list):
+            r = [self.serialize(i) for i in val]
+            return str(sorted(list(set(r))))
+        elif isinstance(val, str): val = val.strip()
+        return(str(val))
+
     def update(self, update):
         for k,v in update.items(): setattr(self, k, v)
         self.backend.update_one({"uuid" : self.uuid}, {"$set" : update})
@@ -107,16 +123,13 @@ class Instance():
 
     
 class Raw(Instance):
-    def __init__(self, raw_type, data, orgid, timezone="UTC", **kwargs):
+    def __init__(self, sub_type, data, orgid, timezone="UTC", **kwargs):
         if isinstance(data, str): data = json.loads(data)
-        self.itype, self.raw_type, self.data = 'raw', raw_type, data
+        self.itype, self.data = 'raw', data
         self.orgid, self.timezone = orgid, timezone
-        d = json.dumps(data, sort_keys=True)
-        self._hash = hashlib.md5(d.encode('utf-8')).hexdigest()
-        super().__init__(**kwargs)
+        super().__init__(sub_type=sub_type, **kwargs)
         
-    def duplicate(self): return self.backend.find_one({"itype":"raw","_hash":self._hash})
-
+    
     def update_ref(self, ref_uuid_list):
         if hasattr(self, "_ref"): self._ref = self._ref + ref_uuid_list
         else: self._ref = ref_uuid_list
@@ -133,8 +146,8 @@ class OES(Instance):
         self.data = dict(d)        
 
         c_ref = [i.uuid for i in data]
-        gc_ref = [r for i in data if not isinstance(i, Attribute) for r in i._ref]
-        self._ref = sorted(list(set(c_ref + gc_ref)))
+        gc_ref = [r for i in data if hasattr(i, "_ref") for r in i._ref]
+        self._ref = list(set(c_ref + gc_ref))
         super().__init__(**kwargs)
 
     def __iter__(self): return iter(self.backend.find({"uuid":{"$in" : self._ref}}))
@@ -150,26 +163,23 @@ class OES(Instance):
 
         
 class Session(OES):
-    def __init__(self, session_type, data=None, **kwargs):
-        self.itype, self.session_type, self._eref = 'session', session_type, []
-        super().__init__(data, **kwargs)
-
-    def duplicate(self): return self.backend.find_one({"session_type":self.session_type, "_ref":self._ref})
+    def __init__(self, sub_type, data=None, **kwargs):
+        self.itype, self._eref = 'session', []
+        super().__init__(data, sub_type=sub_type, **kwargs)
 
     def events(self, p={"_id":0}): return self.backend.find({"uuid":{"$in" : self._eref}}, p)
         
     def add_event(self, events):
         events = self.verified_instances(events, [Event])
         self._eref = self._eref + [i.uuid for i in events]
-        self._eref = sorted(list(set(self._eref)))
         self.backend.update_one( {"uuid":self.uuid}, {"$set":{"_eref":self._eref}})
 
     
 class Event(OES):
-    def __init__(self, event_type, data, orgid, timestamp, malicious=False, **kwargs):
-        self.itype, self.event_type, self.orgid = 'event', event_type, orgid
+    def __init__(self, sub_type, data, orgid, timestamp, malicious=False, **kwargs):
+        self.itype, self.orgid = 'event', orgid
         self.timestamp, self.malicious = timestamp, malicious
-        super().__init__(data, **kwargs)
+        super().__init__(data, sub_type=sub_type, **kwargs)
 
     def delete(self):
         # delete self
@@ -179,8 +189,6 @@ class Event(OES):
         # delete raw._ref s.t. self.uuid in raw._ref
         # delete raw.filters s.t. self.uuid in raw._ref if len(raw.filters) == 1 else ??
         pass
-
-    def duplicate(self): return self.backend.find_one({"event_type":self.event_type, "_ref":self._ref})
 
     def sessions(self, p={"_id":0}): return self.backend.find({"_eref":self.uuid}, p)
 
@@ -193,49 +201,39 @@ class Event(OES):
 
 
 class Object(OES):
-    def __init__(self, obj_type, data, **kwargs):
-        self.itype, self.obj_type = 'object', obj_type
-        super().__init__(data, **kwargs)
-
-    def duplicate(self): return self.backend.find_one({"obj_type":self.obj_type, "_ref":self._ref})
+    def __init__(self, sub_type, data, **kwargs):
+        self.itype = 'object'
+        super().__init__(data, sub_type=sub_type, **kwargs)
 
     def events(self, p={"_id":0}): return self.parents({"itype":"event"},p)
 
-    def get_data(self): return {self.obj_type : [self.data]}
+    def get_data(self): return {self.sub_type : [self.data]}
 
 
 class Attribute(Instance):   
-    def __init__(self, att_type, value, uuid=None, alias=[], **kwargs):
-        self.itype, self.att_type, self.uuid = 'attribute', att_type, uuid 
-        if size(value) > 999: self.value, self.large_value = "^_large_value_$", value
-        else: self.value = value
-        super().__init__(**kwargs)
-        self.create_alias(alias)
+    def __init__(self, sub_type, data, uuid=None, **kwargs):
+        self.itype, self.data, self.uuid = 'attribute', data, uuid
+        super().__init__(sub_type=sub_type, **kwargs)
+
+        aka = kwargs.pop("aka",[])
+        _aka = kwargs.pop("_aka",[]) + [self.sub_type]
+        self.create_alias(aka, _aka)
 
     def count(self, start=0, end=None):
         if not end: end = time.time()
         return self.backend.count({"itype":"event", "_ref":self.uuid, "timestamp":{"$gte":start, "$lte":end}})
         
-    def create_alias(self, alias):
-        atl = alias + _ATT_ALIAS.get(self.att_type,[])
-        if not atl: return
-        value = self.value if self.value != "^_large_value_$" else self.large_value
-        for at in atl: Attribute(at, value, uuid=self.uuid, backend=self.backend)
+    def create_alias(self, aka, _aka):
+        aka = aka + _ATT_ALIAS.get(self.sub_type, [])
+        for sub_type in set(aka) - set(_aka):
+            Attribute(sub_type, self.data, self.uuid,
+                      backend = self.backend, _aka = _aka)
 
-    def duplicate(self):
-        q = {"att_type":self.att_type, "value":self.value}
-        if self.value == "^_large_value_$":
-            q.update({"large_value":self.large_value})
-        return self.backend.find_one(q)
+    def events(self, p={"_id":0}): return self.parents({"itype":"event"}, p)
 
-    def events(self, p={"_id":0}): return self.parents({"itype":"event"},p)
+    def get_data(self): return {self.sub_type : [self.data]}
 
-    def get_data(self):
-        d = {self.att_type : [self.value]}
-        if self.value == "^_large_value_$": d["large_value"] = [self.large_value]
-        return d
-
-    def objects(self, p={"_id":0}): return self.parents({"itype":"object"},p)
+    def objects(self, p={"_id":0}): return self.parents({"itype":"object"}, p)
     
 
 
@@ -406,10 +404,10 @@ def example1():
     pprint(session.doc())
     print("\n")
 
-    raw_type = "x-unr-honeypot"
+    sub_type = "x-unr-honeypot"
     orgid = "identity--f27df111-ca31-4700-99d4-2635b6c37851"
     orgid = None
-    raw = Raw(raw_type, data, orgid, backend=db)
+    raw = Raw(sub_type, data, orgid, backend=db)
 
     
     pprint(raw.doc())
