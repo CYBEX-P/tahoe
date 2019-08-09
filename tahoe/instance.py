@@ -38,18 +38,20 @@ _ATT_ALIAS = {
     "yara":["nids"]
 }
 
+
 class Instance():
     backend = get_backend() if os.getenv("_MONGO_URL") else NoBackend()
     
     def __init__(self, **kwargs):
         if type(self.backend) == NoBackend and os.getenv("_MONGO_URL"):
             self.backend = get_backend()
-        if kwargs.get('backend'): self.backend = kwargs.get('backend') 
+        if 'backend' in kwargs:
+            self.backend = kwargs.get('backend') 
         if not isinstance(self.backend, Backend):
-            raise TypeError('backend cannot be of type ' + str(type(backend)))
+            raise TypeError('backend cannot be of type ' + str(type(self.backend)))
 
         self.sub_type = kwargs.pop("sub_type")
-        unique = self.itype + self.sub_type + self.serialize(self.data)
+        unique = self.itype + self.sub_type + self.canonical_data()
         self._hash = hashlib.sha256(unique.encode('utf-8')).hexdigest()
         
         dup = self.duplicate()
@@ -62,14 +64,34 @@ class Instance():
 
     def __str__(self): return self.json()
 
-    def branch(self, val, old=[]):
-        b = []
-        if isinstance(val, dict):
-            for k in val: b += self.branch(val[k], old+[str(k)])
-        elif isinstance(val, list):
-            for k in val: b += self.branch(k, old)
-        else: b.append(old + [val])
-        return b
+    def branches(self):
+        
+        def branch(val, old=[]):
+            b = []
+            if isinstance(val, dict):
+                for k in val: b += branch(val[k], old+[str(k)])
+            elif isinstance(val, list):
+                for k in val: b += branch(k, old)
+            else:
+                b.append(old + [val])
+            return b
+
+        return branch(self.data)
+
+    def canonical_data(self):
+
+        def canonicalize(val):
+            if isinstance(val, dict):
+                r = {k : canonicalize(v) for k,v in val.items()}
+                return str(dict(sorted(r.items())))
+            elif isinstance(val, list):
+                r = [canonicalize(i) for i in val]
+                return str(sorted(list(set(r))))
+            elif isinstance(val, str):
+                val = val.strip()
+            return(str(val))
+
+        return canonicalize(self.data)
 
     def doc(self): return {k:v for k,v in vars(self).items() if v is not None and k not in ['backend','schema']}
 
@@ -77,8 +99,8 @@ class Instance():
 
     def json(self): return json.dumps(self.doc())
 
-    def json_dot(self, data, old = ""):
-        return [{old + ".".join(i[:-1]) : i[-1]} for i in self.branch(data)]
+##    def json_dot(self, data, old = ""):
+##        return [{old + ".".join(i[:-1]) : i[-1]} for i in self.branch(data)]
         
     def related(self, lvl=1, itype=None, p={"_id":0}):
         rel_uuid = list(set(self.related_uuid(lvl)))
@@ -95,16 +117,6 @@ class Instance():
 
     def parents(self, q={}, p={"_id":0}):
         return self.backend.find({**{"_ref":self.uuid}, **q}, p)
-
-    def serialize(self, val):
-        if isinstance(val, dict):
-            r = {k : self.serialize(v) for k,v in val.items()}
-            return str(dict(sorted(r.items())))
-        elif isinstance(val, list):
-            r = [self.serialize(i) for i in val]
-            return str(sorted(list(set(r))))
-        elif isinstance(val, str): val = val.strip()
-        return(str(val))
 
     def update(self, update):
         for k,v in update.items(): setattr(self, k, v)
@@ -133,7 +145,7 @@ class Raw(Instance):
     def update_ref(self, ref_uuid_list):
         if hasattr(self, "_ref"): self._ref = self._ref + ref_uuid_list
         else: self._ref = ref_uuid_list
-        self._ref = sorted(list(set(self._ref)))
+        self._ref = list(set(self._ref))
         self.backend.update_one({"uuid":self.uuid}, {"$set":{"_ref":self._ref}})
 
 
@@ -152,8 +164,8 @@ class OES(Instance):
 
     def __iter__(self): return iter(self.backend.find({"uuid":{"$in" : self._ref}}))
 
-    def feature(self):
-        branches = self.branch(self.data)
+    def features(self):
+        branches = self.branches()
         r = defaultdict(list)
         for b in branches:
             k, v = b[:-1], b[-1]
@@ -172,6 +184,7 @@ class Session(OES):
     def add_event(self, events):
         events = self.verified_instances(events, [Event])
         self._eref = self._eref + [i.uuid for i in events]
+        self._eref = list(set(self._eref))
         self.backend.update_one( {"uuid":self.uuid}, {"$set":{"_eref":self._eref}})
 
     
@@ -179,6 +192,10 @@ class Event(OES):
     def __init__(self, sub_type, data, orgid, timestamp, malicious=False, **kwargs):
         self.itype, self.orgid = 'event', orgid
         self.timestamp, self.malicious = timestamp, malicious
+        mal_data = kwargs.pop("mal_data",None)
+        if mal_data:
+            mal_data = self.verified_instances(mal_data, [Attribute, Object])
+            self._mal_ref = [i.uuid for i in mal_data]
         super().__init__(data, sub_type=sub_type, **kwargs)
 
     def delete(self):
@@ -229,11 +246,27 @@ class Attribute(Instance):
             Attribute(sub_type, self.data, self.uuid,
                       backend = self.backend, _aka = _aka)
 
+    def delete(self):
+##        r = self.backend.find({"_ref" : self.uuid})
+##        if r: raise DependencyError("Other instances contain this " + self.itype)
+##        self.backend.delete_one({"uuid":"self.uuid"})
+        pass
+        
+
     def events(self, p={"_id":0}): return self.parents({"itype":"event"}, p)
 
     def get_data(self): return {self.sub_type : [self.data]}
 
     def objects(self, p={"_id":0}): return self.parents({"itype":"object"}, p)
+
+    def update(self, update):
+        # update format {sub_type : str, data : str}
+        # self.backend.update_one({"uuid" : self.uuid}, {"$set" : update})
+        # create function get_data_from_ref() for OES
+        # get all OESR s.t. {"_ref" : self.uuid}
+        # parse all the above OES
+        # each OESR.update({data : OESR.get_data_from_ref()})
+        pass
     
 
 
@@ -390,6 +423,8 @@ def example1():
 
     e2 = Event('test', [url2_att, ipv4_att, ip_att2, ip_obj],
                'identity--61de9cc8-d015-4461-9b34-d2fb39f093fb', timestamp, backend=db)
+    pprint(e2.doc())
+    print("\n")
     
     hostname = data['host']['name']
     hostname_att = Attribute('hostname', hostname, backend=db)
@@ -432,7 +467,7 @@ def example1():
 
     for i in url_att.related(lvl=3): print(i["uuid"])
 
-    print(e.feature())
+    print(e.features())
         
     pdb.set_trace()
     

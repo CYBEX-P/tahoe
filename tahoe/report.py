@@ -4,48 +4,42 @@ from pymongo.collection import Collection
 if __name__ == "__main__": from instance import *
 else: from .instance import *
 
-if __name__ == "__main__":
-    config = { 
-            "mongo_url" : "mongodb://cybexp_user:CybExP_777@134.197.21.231:27017/?authSource=admin",
-            "analytics_db" : "tahoe_db",
-            "analytics_coll" : "instances"
-        }
-    os.environ["_MONGO_URL"] = config.pop("mongo_url")
-    os.environ["_TAHOE_DB"] = config.pop("analytics_db", "tahoe_db")
-    os.environ["_TAHOE_COLL"] = config.pop("analytics_coll", "instances")
-
-
 _LIM = 10000
 
 class Report():
     backend = get_backend() if os.getenv("_MONGO_URL") else NoBackend()
     
     def __init__(self, **kwargs):
-        if type(self.backend) == NoBackend and os.getenv("_MONGO_URL"): self.backend = get_backend()
-        if kwargs.get('backend'): self.backend = kwargs.get('backend') 
+        if type(self.backend) == NoBackend and os.getenv("_MONGO_URL"):
+            self.backend = get_backend()
+        if 'backend' in kwargs:
+            self.backend = kwargs.get('backend') 
         if not isinstance(self.backend, Backend):
-            raise TypeError('backend cannot be of type ' + str(type(backend)))
+            raise TypeError('backend cannot be of type ' + str(type(self.backend)))
+
+    def attributes(self, limit=1000, skip=0):
+        return self.backend.find({"itype":"attribute"}, limit=limit, skip=skip)
 
     def attribute_types(self, count=True):
         b = self.backend
-        if not count: return sorted(b.distinct("att_type", {"itype":"attribute"}))
+        if not count: return sorted(b.distinct("sub_type", {"itype":"attribute"}))
         
         p = [{"$match":{"itype":"attribute"}},
-             {"$group":{"_id":"$att_type", "count":{"$sum":1}}}]
+             {"$group":{"_id":"$sub_type", "count":{"$sum":1}}}]
         r = b.aggregate(p)
         return dict(sorted({i["_id"] : i["count"] for i in r}.items()))
 
-    def attribute_values(self, att_type, count=False):
-        q = {"itype":"attribute","att_type":att_type}
-        p = {"value":1, "uuid":1}
-        r = self.backend.find(q,p)
+    def attribute_values(self, sub_type, count=False):
+        q = {"itype":"attribute","sub_type":sub_type}
+        p = {"data":1, "uuid":1}
+        r = self.backend.find(q, p)
         
-        if not count: return sorted([i["value"] for i in r])
+        if not count: return sorted([i["data"] for i in r])
 
         d = {}
         for i in r:
             q = {"itype":"event", "_ref":i["uuid"]}
-            d[i["value"]] = self.backend.count_documents(q, limit=_LIM)
+            d[i["data"]] = self.backend.count_documents(q, limit=_LIM)
         return dict(sorted(d.items()))
 
     def event_features(self, limit, page_no):
@@ -54,30 +48,25 @@ class Report():
         d = {}
         for e in events:
             e = parse(e)
-            d[e.uuid] = e.feature()
+            d[e.uuid] = e.features()
         return d           
     
     def event_types(self, count=True):
         b = self.backend
-        if not count: return sorted(b.distinct("event_type", {"itype":"event"}))
+        if not count: return sorted(b.distinct("sub_type", {"itype":"event"}))
         
         p = [{"$match":{"itype":"event"} },
-             {"$group":{"_id":"$event_type", "count":{"$sum":1}}}]
+             {"$group":{"_id":"$sub_type", "count":{"$sum":1}}}]
         r = b.aggregate(p)
         return dict(sorted({i["_id"] : i["count"] for i in r}.items()))
 
     def events(self, limit=100, skip=0):
         return self.backend.find({"itype":"event"}, limit=limit, skip=skip)
 
+    def objects(self, limit=1000, skip=0):
+        return self.backend.find({"itype":"object"}, limit=limit, skip=skip)
+
     
-
-
-
-
-
-
-
-
 
 
 
@@ -173,12 +162,27 @@ class Report():
 ####
 ####
 ##from pprint import pprint
-##r = Report()
-##res = r.attribute_types()
-##print('\n', res)
+
 ##res = r.attribute_values("country_name")
 ##print('\n')
 ##pprint(res)
 ##res = r.attribute_values("country_name",count=True)
 ##print('\n')
 ##pprint(res)
+
+def example1():
+    r = Report(backend=get_backend())
+    res = r.attribute_types()
+    print('\n', res)    
+
+if __name__ == "__main__":
+    config = { 
+            "mongo_url" : "mongodb://cybexp_user:CybExP_777@134.197.21.231:27017/?authSource=admin",
+            "analytics_db" : "tahoe_db",
+            "analytics_coll" : "instances"
+        }
+    os.environ["_MONGO_URL"] = config.pop("mongo_url")
+    os.environ["_TAHOE_DB"] = config.pop("analytics_db", "tahoe_db")
+    os.environ["_TAHOE_COLL"] = config.pop("analytics_coll", "instances")
+
+    example1()
