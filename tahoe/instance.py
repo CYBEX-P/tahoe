@@ -11,6 +11,7 @@ else: from .backend import get_backend, Backend, MongoBackend, NoBackend
 _ATT_ALIAS = {
     "asn":["AS"],
     "btc":["cryptocurrency_address"],
+    "cidr":["ip"],
     "comment":["text"],
     "creation_date":["date"],
     "cve_id":["vulnerability"],
