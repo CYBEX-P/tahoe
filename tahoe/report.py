@@ -21,7 +21,8 @@ class Report():
         return self.backend.find({"itype":"attribute"}, limit=limit, skip=skip)
 
     def attribute_types(self, count=True):
-        b = self.backend
+        b = self.backend           
+        
         if not count: return sorted(b.distinct("sub_type", {"itype":"attribute"}))
         
         p = [{"$match":{"itype":"attribute"}},
@@ -29,18 +30,28 @@ class Report():
         r = b.aggregate(p)
         return dict(sorted({i["_id"] : i["count"] for i in r}.items()))
 
-    def attribute_values(self, sub_type, count=False):
+    def attribute_values(self, sub_type, count=False, start=None, end=None):
+        b = self.backend 
+        
         q = {"itype":"attribute","sub_type":sub_type}
         p = {"data":1, "uuid":1}
-        r = self.backend.find(q, p)
-        
-        if not count: return sorted([i["data"] for i in r])
+        r = b.find(q, p)
 
-        d = {}
-        for i in r:
-            q = {"itype":"event", "_ref":i["uuid"]}
-            d[i["data"]] = self.backend.count_documents(q, limit=_LIM)
-        return dict(sorted(d.items()))
+        if(start or end):
+            lv = [i["data"] for i in r]
+            d = {v : Attribute(sub_type, v).count(start, end) for v in lv }
+            d = {k:v for k,v in d.items() if v}
+            if not count: return sorted(d.keys())
+            else: return dict(sorted(d.items()))
+
+        else:
+            if not count: return sorted([i["data"] for i in r])
+
+            d = {}
+            for i in r:
+                q = {"itype":"event", "_ref":i["uuid"]}
+                d[i["data"]] = b.count_documents(q, limit=_LIM)
+            return dict(sorted(d.items()))
 
     def event_features(self, limit, page_no):
         events = self.events(limit, skip=page_no*limit)

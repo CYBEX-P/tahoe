@@ -56,7 +56,7 @@ class Instance():
         self._hash = hashlib.sha256(unique.encode('utf-8')).hexdigest()
         
         dup = self.duplicate()
-        if dup: [setattr(self,k,v) for k,v in dup.items()]
+        if dup: [setattr(self,k,v) for k,v in dup.items() if k not in ["_id"]]
         else: 
             if not hasattr(self, 'uuid') or not self.uuid:
                 self.uuid = self.itype + '--' + str(uuid4())
@@ -195,6 +195,8 @@ class Event(OES):
         self.timestamp, self.malicious = timestamp, malicious
         mal_data = kwargs.pop("mal_data",None)
         if mal_data:
+            for i in mal_data:
+                if i not in data: raise ValueError("Malicious instance not in data: ", i.uuid)
             mal_data = self.verified_instances(mal_data, [Attribute, Object])
             self._mal_ref = [i.uuid for i in mal_data]
         super().__init__(data, sub_type=sub_type, **kwargs)
@@ -477,9 +479,9 @@ def example1():
 def example2():
     from pprint import pprint
     config = {}
-    os.environ["_MONGO_URL"] = config.pop("mongo_url", "mongodb://cybexp_user:CybExP_777@134.197.21.231:27017/?authSource=admin")
-    os.environ["_ANALYTICS_DB"] = config.pop("analytics_db", "tahoe_db")
-    os.environ["_ANALYTICS_COLL"] = config.pop("analytics_coll", "instances")
+    os.environ["_MONGO_URL"] = "mongodb://cybexp_user:CybExP_777@134.197.21.231:27017/?authSource=admin"
+    os.environ["_ANALYTICS_DB"] = "tahoe_db"
+    os.environ["_ANALYTICS_COLL"] = "instances"
 
     backend = get_backend()
   
@@ -487,9 +489,23 @@ def example2():
         pprint(i)
     rr = r
 
+def example3():
+    from pprint import pprint
+    os.environ["_MONGO_URL"] = "mongodb://cybexp_user:CybExP_777@134.197.21.231:27017/?authSource=admin"
+    os.environ["_ANALYTICS_DB"] = "tahoe_db"
+    os.environ["_ANALYTICS_COLL"] = "instances"
+
+    backend = get_backend()
     
+    aa = Attribute("asn", "15169", backend)
+##    aa = Attribute("ipv4", "172.217.164.110")
+    pprint(aa.related_uuid(1))
+    r = aa.related(3)
+    for i in r:
+        if i["itype"] == 'attribute':
+            print(i["data"])
+    pdb.set_trace()
 
 
-if __name__ == "__main__": example1()
-
-
+if __name__ == "__main__": 
+    pass
