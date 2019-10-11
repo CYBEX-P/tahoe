@@ -243,33 +243,34 @@ class Attribute(Instance):
         if not end: end = time.time()
         return self.backend.count({"itype":"event", "_ref":self.uuid, "timestamp":{"$gte":start, "$lte":end}})
 
-    def countbyorg(self, orgid, start=0, end=None):
+    def countbyorgid(self, orgid, start=0, end=None):
         if not end: end = time.time()
         return self.backend.count({"itype":"event", "orgid":orgid, "_ref":self.uuid, "timestamp":{"$gte":start, "$lte":end}})
 
-    def countorgid(self, start=0, end=None):
+    def countbyorgidsummary(self, start=0, end=None):
         if not end: end = time.time()
-        d = {}
         
-        r = self.backend.find({"itype":"event", "_ref":self.uuid, "timestamp":{"$gte":start, "$lte":end}})
-        for i in r:
-            oid = i["orgid"]
-            if oid not in d: d[oid] = 1
-            else: d[oid] += 1
-        return d
+        p = [{"$match":{"itype":"event", "_ref":self.uuid, "timestamp":{"$gte":start, "$lte":end}}},
+             {"$group":{"_id":"$orgid", "count":{"$sum":1}}}]
+        r = self.backend.aggregate(p)
+        return dict(sorted({i["_id"] : i["count"] for i in r}.items()))
 
     def countbyorgsummary(self, key='org_name', start=0, end=None):
         assert(key in ['org_name', 'org_category'])
 
         d = {}
-        dovc = self.countorgid(start, end)
+        t1 = time.time()
+        dovc = self.countbyorgidsummary(start, end)
+        t2 = time.time()
         for oid, v in dovc.items():
             k = self.backend.find_one({"uuid":oid})[key]
 
             if k not in d: d[k] = v
             else: d[k] += v
-            
+        t3 = time.time()
+        print(t2-t1, t3-t2)
         return dict(sorted(d.items()))
+
         
     def create_alias(self, aka, _aka):
         aka = aka + _ATT_ALIAS.get(self.sub_type, [])
