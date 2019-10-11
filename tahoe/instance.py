@@ -195,8 +195,8 @@ class Event(OES):
         self.timestamp, self.malicious = timestamp, malicious
         mal_data = kwargs.pop("mal_data",None)
         if mal_data:
-            for i in mal_data:
-                if i not in data: raise ValueError("Malicious instance not in data: ", i.uuid)
+##            for i in mal_data:
+##                if i not in data: raise ValueError("Malicious instance not in data: ", i.uuid)
             mal_data = self.verified_instances(mal_data, [Attribute, Object])
             self._mal_ref = [i.uuid for i in mal_data]
         super().__init__(data, sub_type=sub_type, **kwargs)
@@ -242,6 +242,34 @@ class Attribute(Instance):
     def count(self, start=0, end=None):
         if not end: end = time.time()
         return self.backend.count({"itype":"event", "_ref":self.uuid, "timestamp":{"$gte":start, "$lte":end}})
+
+    def countbyorg(self, orgid, start=0, end=None):
+        if not end: end = time.time()
+        return self.backend.count({"itype":"event", "orgid":orgid, "_ref":self.uuid, "timestamp":{"$gte":start, "$lte":end}})
+
+    def countorgid(self, start=0, end=None):
+        if not end: end = time.time()
+        d = {}
+        
+        r = self.backend.find({"itype":"event", "_ref":self.uuid, "timestamp":{"$gte":start, "$lte":end}})
+        for i in r:
+            oid = i["orgid"]
+            if oid not in d: d[oid] = 1
+            else: d[oid] += 1
+        return d
+
+    def countbyorgsummary(self, key='org_name', start=0, end=None):
+        assert(key in ['org_name', 'org_category'])
+
+        d = {}
+        dovc = self.countorgid(start, end)
+        for oid, v in dovc.items():
+            k = self.backend.find_one({"uuid":oid})[key]
+
+            if k not in d: d[k] = v
+            else: d[k] += v
+            
+        return dict(sorted(d.items()))
         
     def create_alias(self, aka, _aka):
         aka = aka + _ATT_ALIAS.get(self.sub_type, [])
