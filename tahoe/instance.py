@@ -239,9 +239,11 @@ class Attribute(Instance):
         _aka = kwargs.pop("_aka",[]) + [self.sub_type]
         self.create_alias(aka, _aka)
 
-    def count(self, start=0, end=None):
+    def count(self, start=0, end=None, malicious=False):
         if not end: end = time.time()
-        return self.backend.count({"itype":"event", "_ref":self.uuid, "timestamp":{"$gte":start, "$lte":end}})
+        q = {"itype":"event", "_ref":self.uuid, "timestamp":{"$gte":start, "$lte":end}}
+        if malicious: q = {"itype":"event", "_mal_ref":self.uuid, "timestamp":{"$gte":start, "$lte":end}}
+        return self.backend.count(q)
 
     def countbyorgid(self, orgid, start=0, end=None):
         if not end: end = time.time()
@@ -249,26 +251,25 @@ class Attribute(Instance):
 
     def countbyorgidsummary(self, start=0, end=None):
         if not end: end = time.time()
-        
-        p = [{"$match":{"itype":"event", "_ref":self.uuid, "timestamp":{"$gte":start, "$lte":end}}},
+        t1 = time.time()
+        p = [{"$match":{"itype":"event", "_ref":self.uuid,
+                        "timestamp":{"$gte":start, "$lte":end}}},
              {"$group":{"_id":"$orgid", "count":{"$sum":1}}}]
         r = self.backend.aggregate(p)
+        print(time.time() - t1)
         return dict(sorted({i["_id"] : i["count"] for i in r}.items()))
 
     def countbyorgsummary(self, key='org_name', start=0, end=None):
         assert(key in ['org_name', 'org_category'])
+        if not end: end = time.time()
 
         d = {}
-        t1 = time.time()
         dovc = self.countbyorgidsummary(start, end)
-        t2 = time.time()
         for oid, v in dovc.items():
             k = self.backend.find_one({"uuid":oid})[key]
 
             if k not in d: d[k] = v
             else: d[k] += v
-        t3 = time.time()
-        print(t2-t1, t3-t2)
         return dict(sorted(d.items()))
 
         
