@@ -2,10 +2,14 @@ from jsonschema import Draft7Validator
 from uuid import uuid4
 from sys import getsizeof as size
 from collections import defaultdict
-import json, pdb, os, pytz, pathlib, logging, time, hashlib
+import json, pdb, os, pytz, pathlib, logging, time, hashlib, math
 
-if __name__ in ["__main__", "instance"]: from backend import get_backend, Backend, MongoBackend, NoBackend
-else: from .backend import get_backend, Backend, MongoBackend, NoBackend
+if __name__ in ["__main__", "instance"]:
+    from backend import get_backend, Backend, MongoBackend, NoBackend
+    from misc import dtresolve, limitskip, branches, features
+else:
+    from .backend import get_backend, Backend, MongoBackend, NoBackend
+    from .misc import dtresolve, limitskip, branches, features
 
 ##schema = {k : json.loads(open(((__file__[:-11]+ "schema\\%s.json") %k)).read()) for k in ["attribute","object","event","session","raw"]}
 _ATT_ALIAS = {
@@ -39,6 +43,7 @@ _ATT_ALIAS = {
     "yara":["nids"]
 }
 
+LIM=10
 
 class Instance():
     backend = get_backend() if os.getenv("_MONGO_URL") else NoBackend()
@@ -103,20 +108,22 @@ class Instance():
 ##    def json_dot(self, data, old = ""):
 ##        return [{old + ".".join(i[:-1]) : i[-1]} for i in self.branch(data)]
         
-    def related(self, lvl=1, itype=None, p={"_id":0}):
-        rel_uuid = list(set(self.related_uuid(lvl)))
+    def related(self, lvl=1, itype=None, p={"_id":0}, limit=LIM, page=1):
+        rel_uuid, totpg = self.related_uuid(lvl, limit=limit, page=page)
+        if not rel_uuid: return {}, page, 1, totpg
         q = {"uuid": {"$in": rel_uuid}}
         if itype: q.update({"itype":itype})
-        return self.backend.find(q, p)
+        return self.backend.find(q, p), page, page%totpg+1, totpg
 
-    def related_uuid(self, lvl, v=[]):
+    def related_uuid(self, lvl, v=[], start=0, end=None, limit=LIM, skip=0, page=1):
         uuids = []
-        for e in self.events({"itype":1,"uuid":1,"_ref":1}):
+        r = self.events({"itype":1,"uuid":1,"_ref":1}, start, end, limit, skip, page)
+        for e in r:
             if e["uuid"] in v: continue
             uuids += parse(e, self.backend, False).related_uuid(lvl-1,v)
-        return uuids
+        return uuids, math.ceil(r.count() / limit)
 
-    def parents(self, q={}, p={"_id":0}):
+    def parents(self, q={}, p={"_id":0}): 
         return self.backend.find({**{"_ref":self.uuid}, **q}, p)
 
     def update(self, update):
@@ -172,7 +179,7 @@ class OES(Instance):
             k, v = b[:-1], b[-1]
             for i in range(len(k)):
                 r['.'.join(k[-i:])].append(v)
-        return dict(r)    
+        return {k : list(set(v)) for k,v in r.items()} 
 
         
 class Session(OES):
@@ -180,7 +187,8 @@ class Session(OES):
         self.itype, self._eref = 'session', []
         super().__init__(data, sub_type=sub_type, **kwargs)
 
-    def events(self, p={"_id":0}): return self.backend.find({"uuid":{"$in" : self._eref}}, p)
+    def events(self, p={"_id":0}, start=0, end=None, limit=LIM, skip=0, page=0):
+        return self.backend.find({"uuid":{"$in":self._eref}, **dtresolve(start, end)}, p, **limitskip(limit, skip, page))
         
     def add_event(self, events):
         events = self.verified_instances(events, [Event])
@@ -225,7 +233,8 @@ class Object(OES):
         self.itype = 'object'
         super().__init__(data, sub_type=sub_type, **kwargs)
 
-    def events(self, p={"_id":0}): return self.parents({"itype":"event"},p)
+    def events(self, p={"_id":0}, start=0, end=None, limit=LIM, skip=0, page=1):
+        return self.backend.find({"itype":"event", "_ref":self.uuid, **dtresolve(start, end)}, p, **limitskip(limit, skip, page))
 
     def get_data(self): return {self.sub_type : [self.data]}
 
@@ -238,7 +247,9 @@ class Attribute(Instance):
         aka = kwargs.pop("aka",[])
         _aka = kwargs.pop("_aka",[]) + [self.sub_type]
         self.create_alias(aka, _aka)
-
+    
+    def alias(self): return [i["sub_type"] for i in self.backend.find({"uuid":self.uuid},{"sub_type":1})]
+    
     def count(self, start=0, end=None, malicious=False):
         if not end: end = time.time()
         q = {"itype":"event", "_ref":self.uuid, "timestamp":{"$gte":start, "$lte":end}}
@@ -272,7 +283,6 @@ class Attribute(Instance):
             else: d[k] += v
         return dict(sorted(d.items()))
 
-        
     def create_alias(self, aka, _aka):
         aka = aka + _ATT_ALIAS.get(self.sub_type, [])
         for sub_type in set(aka) - set(_aka):
@@ -284,13 +294,33 @@ class Attribute(Instance):
 ##        if r: raise DependencyError("Other instances contain this " + self.itype)
 ##        self.backend.delete_one({"uuid":"self.uuid"})
         pass
-        
 
-    def events(self, p={"_id":0}): return self.parents({"itype":"event"}, p)
+    def events(self, p={"_id":0}, start=0, end=None, limit=LIM, skip=0, page=1):
+        return self.backend.find({"itype":"event", "_ref":self.uuid, **dtresolve(start, end)}, p, **limitskip(limit, skip, page))
 
     def get_data(self): return {self.sub_type : [self.data]}
 
     def objects(self, p={"_id":0}): return self.parents({"itype":"object"}, p)
+    
+    def relatedeventsummary(self, start=0, end=None, limit=LIM, skip=0, page=1):
+        p = {"sub_type":1,"data":1}
+        r = self.events(p, start, end, limit, skip, page)
+        d = defaultdict(lambda: defaultdict(int))
+        for i in r: 
+            f = []
+            for sub_type in self.alias(): 
+                f += features(i["data"], sub_type, self.data)
+            for k in f: 
+                d[i["sub_type"]][k] += 1
+        totpg = math.ceil(r.count() / limit)
+        return dict(d), page, page%totpg+1, totpg
+    
+    def relatedsummarybyevent(self, level, *args, **kwargs):
+        r, curpg, nxtpg, totpg = self.related(level, itype='event', *args, **kwargs)
+        d = defaultdict(list)
+        for i in r: d[i["sub_type"]].append(i["data"]) 
+        data = {k:features(v) for k,v in d.items()}
+        return data, curpg, nxtpg, totpg
 
     def update(self, update):
         # update format {sub_type : str, data : str}
@@ -301,7 +331,6 @@ class Attribute(Instance):
         # each OESR.update({data : OESR.get_data_from_ref()})
         pass
     
-
 
 def parse(instance, backend=NoBackend(), validate=True):
     if isinstance(instance, str): instance = json.loads(instance)
