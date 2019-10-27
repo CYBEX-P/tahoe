@@ -108,12 +108,13 @@ class Instance():
 ##    def json_dot(self, data, old = ""):
 ##        return [{old + ".".join(i[:-1]) : i[-1]} for i in self.branch(data)]
         
-    def related(self, lvl=1, itype=None, p={"_id":0}, limit=LIM, page=1):
-        rel_uuid, totpg = self.related_uuid(lvl, limit=limit, page=page)
-        if not rel_uuid: return {}, page, 1, totpg
+    def related(self, lvl=1, itype=None, p={"_id":0}, start=0, end=None, limit=LIM, skip=0, page=1):
+        rel_uuid = self.related_uuid(lvl, start=start, end=end, limit=limit, skip=skip, page=page)
+        if not rel_uuid: return {}, page, 1
         q = {"uuid": {"$in": rel_uuid}}
         if itype: q.update({"itype":itype})
-        return self.backend.find(q, p), page, page%totpg+1, totpg
+        d = [i for i in self.backend.find(q, p)]
+        return d, page, page+1
 
     def related_uuid(self, lvl, v=[], start=0, end=None, limit=LIM, skip=0, page=1):
         uuids = []
@@ -121,7 +122,8 @@ class Instance():
         for e in r:
             if e["uuid"] in v: continue
             uuids += parse(e, self.backend, False).related_uuid(lvl-1,v)
-        return uuids, math.ceil(r.count() / limit)
+        t1 = time.time()
+        return list(set(uuids))
 
     def parents(self, q={}, p={"_id":0}): 
         return self.backend.find({**{"_ref":self.uuid}, **q}, p)
@@ -168,6 +170,12 @@ class OES(Instance):
         c_ref = [i.uuid for i in data]
         gc_ref = [r for i in data if hasattr(i, "_ref") for r in i._ref]
         self._ref = list(set(c_ref + gc_ref))
+        
+        ## For event only
+        if self._mal_ref:
+            for i in self._mal_ref:
+                if i not in self._ref: raise ValueError("Malicious instance not in data: " + i)
+        
         super().__init__(**kwargs)
 
     def __iter__(self): return iter(self.backend.find({"uuid":{"$in" : self._ref}}))
@@ -203,8 +211,7 @@ class Event(OES):
         self.timestamp, self.malicious = timestamp, malicious
         mal_data = kwargs.pop("mal_data",None)
         if mal_data:
-##            for i in mal_data:
-##                if i not in data: raise ValueError("Malicious instance not in data: ", i.uuid)
+            malicious=True
             mal_data = self.verified_instances(mal_data, [Attribute, Object])
             self._mal_ref = [i.uuid for i in mal_data]
         super().__init__(data, sub_type=sub_type, **kwargs)
@@ -220,11 +227,11 @@ class Event(OES):
 
     def sessions(self, p={"_id":0}): return self.backend.find({"_eref":self.uuid}, p)
 
-    def related_uuid(self, lvl=0, v=[]):
+    def related_uuid(self, lvl=0, v=[], start=0, end=None, limit=LIM, skip=0, page=1):
         uuids = self._ref + [self.uuid]
-        if lvl == 0: return uuids
+        if lvl <= 0: return uuids
         for s in self.sessions({"itype":1,"uuid":1,"_eref":1}):
-            uuids += parse(s, self.backend).related_uuid(lvl, v+[self.uuid])
+            uuids += parse(s, self.backend).related_uuid(lvl, v+[self.uuid], start=start, end=end)
         return uuids
 
 
@@ -251,34 +258,41 @@ class Attribute(Instance):
     def alias(self): return [i["sub_type"] for i in self.backend.find({"uuid":self.uuid},{"sub_type":1})]
     
     def count(self, start=0, end=None, malicious=False):
-        if not end: end = time.time()
-        q = {"itype":"event", "_ref":self.uuid, "timestamp":{"$gte":start, "$lte":end}}
-        if malicious: q = {"itype":"event", "_mal_ref":self.uuid, "timestamp":{"$gte":start, "$lte":end}}
+        if malicious: q = {"itype":"event", "_mal_ref":self.uuid, **dtresolve(start, end)}
+        else: q = {"itype":"event", "_ref":self.uuid, **dtresolve(start, end)}
+        return self.backend.count(q)
+        
+    def countbyeventatt(self, start=0, end=None, limit=LIM, skip=0, page=1):
+        p = {"sub_type":1,"data":1}
+        r = self.events(p, start, end, limit, skip, page)
+        d = defaultdict(lambda: defaultdict(int))
+        for i in r: 
+            f = []
+            for sub_type in self.alias(): 
+                f += features(i["data"], sub_type, self.data)
+            for k in f: 
+                d[i["sub_type"]][k] += 1
+        return dict(d), page, page+1
+
+    def countbyorgid(self, orgid, start=0, end=None, malicious=False):
+        if malicious: q = {"itype":"event", "orgid":orgid, "_mal_ref":self.uuid, **dtresolve(start, end)}
+        else: q = {"itype":"event", "orgid":orgid, "_ref":self.uuid, **dtresolve(start, end)}
         return self.backend.count(q)
 
-    def countbyorgid(self, orgid, start=0, end=None):
-        if not end: end = time.time()
-        return self.backend.count({"itype":"event", "orgid":orgid, "_ref":self.uuid, "timestamp":{"$gte":start, "$lte":end}})
-
-    def countbyorgidsummary(self, start=0, end=None):
-        if not end: end = time.time()
-        t1 = time.time()
-        p = [{"$match":{"itype":"event", "_ref":self.uuid,
-                        "timestamp":{"$gte":start, "$lte":end}}},
-             {"$group":{"_id":"$orgid", "count":{"$sum":1}}}]
+    def countbyorgidsummary(self, start=0, end=None, malicious=False):
+        if malicious: q = {"itype":"event", "_mal_ref":self.uuid, **dtresolve(start, end)}
+        else: q = {"itype":"event", "_ref":self.uuid, **dtresolve(start, end)}
+        p = [{"$match":q}, {"$group":{"_id":"$orgid", "count":{"$sum":1}}}]
         r = self.backend.aggregate(p)
-        print(time.time() - t1)
         return dict(sorted({i["_id"] : i["count"] for i in r}.items()))
 
-    def countbyorgsummary(self, key='org_name', start=0, end=None):
+    def countbyorgsummary(self, key='org_category', start=0, end=None, malicious=False):
         assert(key in ['org_name', 'org_category'])
-        if not end: end = time.time()
 
         d = {}
-        dovc = self.countbyorgidsummary(start, end)
+        dovc = self.countbyorgidsummary(start, end, malicious=malicious)
         for oid, v in dovc.items():
             k = self.backend.find_one({"uuid":oid})[key]
-
             if k not in d: d[k] = v
             else: d[k] += v
         return dict(sorted(d.items()))
@@ -295,32 +309,22 @@ class Attribute(Instance):
 ##        self.backend.delete_one({"uuid":"self.uuid"})
         pass
 
-    def events(self, p={"_id":0}, start=0, end=None, limit=LIM, skip=0, page=1):
-        return self.backend.find({"itype":"event", "_ref":self.uuid, **dtresolve(start, end)}, p, **limitskip(limit, skip, page))
+    def events(self, p={"_id":0}, start=0, end=None, limit=LIM, skip=0, page=1, malicious=False, isselfmalicious=False):
+        q = {"itype":"event", "_ref":self.uuid, **dtresolve(start, end)}
+        if malicious: q["malicious"]=True
+        if isselfmalicious: q = {"itype":"event", "_mal_ref":self.uuid, **dtresolve(start, end)}
+        return self.backend.find(q, p, **limitskip(limit, skip, page))
 
     def get_data(self): return {self.sub_type : [self.data]}
 
     def objects(self, p={"_id":0}): return self.parents({"itype":"object"}, p)
     
-    def relatedeventsummary(self, start=0, end=None, limit=LIM, skip=0, page=1):
-        p = {"sub_type":1,"data":1}
-        r = self.events(p, start, end, limit, skip, page)
-        d = defaultdict(lambda: defaultdict(int))
-        for i in r: 
-            f = []
-            for sub_type in self.alias(): 
-                f += features(i["data"], sub_type, self.data)
-            for k in f: 
-                d[i["sub_type"]][k] += 1
-        totpg = math.ceil(r.count() / limit)
-        return dict(d), page, page%totpg+1, totpg
-    
-    def relatedsummarybyevent(self, level, *args, **kwargs):
-        r, curpg, nxtpg, totpg = self.related(level, itype='event', *args, **kwargs)
+    def relatedsummarybyevent(self, lvl=1, start=0, end=None, limit=LIM, skip=0, page=1):
+        r, curpg, nxtpg = self.related(lvl, itype='event', p={"sub_type":1, "data":1}, start=start, end=end, limit=limit, skip=skip, page=page)
         d = defaultdict(list)
         for i in r: d[i["sub_type"]].append(i["data"]) 
         data = {k:features(v) for k,v in d.items()}
-        return data, curpg, nxtpg, totpg
+        return data, curpg, nxtpg
 
     def update(self, update):
         # update format {sub_type : str, data : str}
@@ -333,6 +337,7 @@ class Attribute(Instance):
     
 
 def parse(instance, backend=NoBackend(), validate=True):
+    backend = get_backend() if os.getenv("_MONGO_URL") else NoBackend()
     if isinstance(instance, str): instance = json.loads(instance)
     instance.pop("_id", None)
     t = Attribute('text', 'mock')
