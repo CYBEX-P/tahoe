@@ -23,13 +23,16 @@ def branches(d):
 
     return branch(d)
 
-def features(d, sub_type=None, data=None):
+def features(d, sub_type=None, data=None, sep='.', root_only=False):
     brn = branches(d)
     r = defaultdict(list)
     for b in brn:
         if (sub_type and data) and not (b[-2]==sub_type and b[-1]==data): continue
         k, v = b[:-1], b[-1]
-        for i in range(len(k)):
-            r['.'.join(k[-i:])].append(v)
+        if root_only:
+            r[sep.join(k)].append(v)
+        else:
+            for i in range(len(k)):
+                r[sep.join(k[-i:])].append(v)
     return {k : list(set(v)) for k,v in r.items()} 
     

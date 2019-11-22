@@ -39,5 +39,5 @@ def get_backend():
 
     client = MongoClient(mongo_url)
     db = client.get_database(db)
-    backend = MongoBackend(db)
+    backend = MongoBackend(db, name=coll)
     return backend

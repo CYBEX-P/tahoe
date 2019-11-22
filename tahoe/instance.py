@@ -19,6 +19,8 @@ _ATT_ALIAS = {
     "comment":["text"],
     "creation_date":["date"],
     "cve_id":["vulnerability"],
+    "epp_client_code":["epp_status_code"],
+    "epp_server_code":["epp_status_code"],
     "hex_data":["data"],
     "imphash":["hash", "checksum"],
     "ipv4":["ip"],
@@ -57,16 +59,22 @@ class Instance():
             raise TypeError('backend cannot be of type ' + str(type(self.backend)))
 
         self.sub_type = kwargs.pop("sub_type")
-        unique = self.itype + self.sub_type + self.canonical_data()
-        self._hash = hashlib.sha256(unique.encode('utf-8')).hexdigest()
+        self._hash = hashlib.sha256(self.unique()).hexdigest()
         
+        self.deduplicate()
+##      self.validate()
+
+    def unique(self): 
+        unique = self.itype + self.sub_type + self.canonical_data()
+        return unique.encode('utf-8')
+
+    def deduplicate(self):
         dup = self.duplicate()
         if dup: [setattr(self,k,v) for k,v in dup.items() if k not in ["_id"]]
         else: 
             if not hasattr(self, 'uuid') or not self.uuid:
                 self.uuid = self.itype + '--' + str(uuid4())
             self.backend.insert_one(self.doc())
-##      self.validate()        
 
     def __str__(self): return self.json()
 
@@ -172,14 +180,15 @@ class OES(Instance):
         self._ref = list(set(c_ref + gc_ref))
         
         ## For event only
-        if self._mal_ref:
-            for i in self._mal_ref:
-                if i not in self._ref: raise ValueError("Malicious instance not in data: " + i)
+        if hasattr(self,"_mal_ref"):
+            for uuid in self._mal_ref:
+                if uuid not in self._ref:
+                    raise ValueError("Malicious instance not in data: " + uuid)
         
         super().__init__(**kwargs)
 
     def __iter__(self): return iter(self.backend.find({"uuid":{"$in" : self._ref}}))
-
+    
     def features(self):
         branches = self.branches()
         r = defaultdict(list)
@@ -240,6 +249,25 @@ class Object(OES):
         self.itype = 'object'
         super().__init__(data, sub_type=sub_type, **kwargs)
 
+    def add_instance(self, data, update=False):
+        # remove uuid of replaced attribute from _ref
+        
+        data = self.verified_instances(data, [Attribute, Object])
+
+        d = defaultdict(list)
+        d.update(self.data)
+        for i in data:
+            for k,v in i.get_data().items(): 
+                if update: d[k] = v
+                else: d[k] += v
+        self.data = dict(d)        
+        
+        c_ref = [i.uuid for i in data]
+        gc_ref = [r for i in data if hasattr(i, "_ref") for r in i._ref]
+        self._ref = list(set(self._ref + list(set(c_ref + gc_ref))))
+                
+        self.update({"data" : self.data, "_ref": self._ref})    
+        
     def events(self, p={"_id":0}, start=0, end=None, limit=LIM, skip=0, page=1):
         return self.backend.find({"itype":"event", "_ref":self.uuid, **dtresolve(start, end)}, p, **limitskip(limit, skip, page))
 
