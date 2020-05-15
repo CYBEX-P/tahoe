@@ -242,6 +242,36 @@ class Event(OES):
         for s in self.sessions({"itype":1,"uuid":1,"_eref":1}):
             uuids += parse(s, self.backend).related_uuid(lvl, v+[self.uuid], start=start, end=end)
         return uuids
+        
+    def corr_test(self):
+        ra = self.backend.find({"itype":"attribute", "uuid":{"$in":self._ref} }, {"_id":0})
+        rel_atts = [parse(i) for i in ra]
+        
+        rel_events = []
+        for a in rel_atts:
+            rel_events += list(a.events())
+            
+        dup = {self.uuid}
+        temp = []
+        for e in rel_events:
+            if e['uuid'] not in dup:
+                dup.add(e['uuid'])
+                temp.append(e)
+        
+        rel_events = temp
+        
+        result = {'score':{}, 'data':{self.uuid:self.data}}
+        A = set([ a for a in self._ref if a[:9]=='attribute'])
+        for e in rel_events:
+            B = set([ a for a in e['_ref'] if a[:9]=='attribute'])
+            A_B = A.intersection(B)
+            jscore = len(A_B) / (len(A) + len(B) - len(A_B))
+            jscore = "{:.2f}".format(jscore*100)
+            
+            result['score'][e['uuid']] = {'score' : jscore, 'event_type': e['sub_type']}
+            result['data'][e['uuid']] = e['data']
+        
+        return result
 
 
 class Object(OES):

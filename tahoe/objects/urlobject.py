@@ -2,18 +2,25 @@ if __name__ in ["__main__", "urlobject"]:
     import sys
     sys.path.append("..")
     from instance import Attribute, Object
+    from misc import features
+    from feature import *   
 else: 
     from ..instance import Attribute, Object
     from ..misc import features
+    from .feature import *
 
+ 
+    
 import copy, pdb, hashlib 
     
 _MAX_ENRICHMENT_ATTEMPT = 3
 
 class UrlObject(Object):
     def __init__(self, url_data, malicious=None, source=None, **kwargs):
-        if isinstance(url_data, str): 
-            assert url_data.lower()[:4] == 'http', 'Valid URL must begin with http'
+        if isinstance(url_data, str):
+            h = url_data.lower()
+            h = h[:4]
+            assert h == 'http', 'Valid URL must begin with http'
             url_data = Attribute('url', url_data, **kwargs)
 
         assert malicious in [True, False, None], "malicious must be True/False/None!"
@@ -84,6 +91,16 @@ class UrlObject(Object):
         enid = 'lexical'
         self.record_enrichment(enid)
 
+    def enrich_ngram(self):
+        if not self.should_enrich('ngram'): return
+
+        ngram_att = get_ngram_att(self.data['url'][0])
+        ngram_obj = Object('ngram_attributes', ngram_att)
+        self.add_instance(ngram_obj, update=True)
+
+        enid = 'ngram'
+        self.record_enrichment(enid)
+
     def enrich_whois(self):
         if not self.should_enrich('whois'): return
         
@@ -101,7 +118,7 @@ class UrlObject(Object):
         
         m = d.pop('malicious')[0]
         u = d.pop('url')[0]
-        s = d.pop('source')[0]
+        s = d.pop('source')[0]        
         
         of = features(d, sep='_', root_only=True)
         
