@@ -2,7 +2,7 @@ from jsonschema import Draft7Validator
 from uuid import uuid4
 from sys import getsizeof as size
 from collections import defaultdict
-import json, pdb, os, pytz, pathlib, logging, time, hashlib, math
+import json, pdb, os, pathlib, logging, time, hashlib, math
 
 if __name__ in ["__main__", "instance"]:
     from backend import get_backend, Backend, MongoBackend, NoBackend
@@ -46,6 +46,7 @@ _ATT_ALIAS = {
 }
 
 LIM=10
+P = {"_id" : 0}
 
 class Instance():
     backend = get_backend() if os.getenv("_MONGO_URL") else NoBackend()
@@ -60,6 +61,8 @@ class Instance():
 
         self.sub_type = kwargs.pop("sub_type")
         self._hash = hashlib.sha256(self.unique()).hexdigest()
+#        self.id = self._hash.hexdigest()
+#        self._hash = self._hash.digest()
         
         self.deduplicate()
 ##      self.validate()
@@ -224,6 +227,8 @@ class Event(OES):
             mal_data = self.verified_instances(mal_data, [Attribute, Object])
             self._mal_ref = [i.uuid for i in mal_data]
         super().__init__(data, sub_type=sub_type, **kwargs)
+        
+    # def unique(self): self.itype + self.sub_type + self.orgid + self.timestamp + self.malicious + self.canonical_data()
 
     def delete(self):
         # delete self
@@ -310,10 +315,10 @@ class Attribute(Instance):
         super().__init__(sub_type=sub_type, **kwargs)
 
         aka = kwargs.pop("aka",[])
-        _aka = kwargs.pop("_aka",[]) + [self.sub_type]
+        _aka = kwargs.pop("_aka",[]) + [self.sub_type] # breaks cycle
         self.create_alias(aka, _aka)
     
-    def alias(self): return [i["sub_type"] for i in self.backend.find({"uuid":self.uuid},{"sub_type":1})]
+    def alias(self): return [i["sub_type"] for i in self.backend.find({"uuid":self.uuid},{**P,"sub_type":1})]
     
     def count(self, start=0, end=None, malicious=False):
         if malicious: q = {"itype":"event", "_mal_ref":self.uuid, **dtresolve(start, end)}
@@ -321,7 +326,7 @@ class Attribute(Instance):
         return self.backend.count(q)
         
     def countbyeventatt(self, start=0, end=None, limit=LIM, skip=0, page=1):
-        p = {"sub_type":1,"data":1}
+        p = {**P,"sub_type":1,"data":1}
         r = self.events(p, start, end, limit, skip, page)
         d = defaultdict(lambda: defaultdict(int))
         for i in r: 
@@ -358,8 +363,7 @@ class Attribute(Instance):
     def create_alias(self, aka, _aka):
         aka = aka + _ATT_ALIAS.get(self.sub_type, [])
         for sub_type in set(aka) - set(_aka):
-            Attribute(sub_type, self.data, self.uuid,
-                      backend = self.backend, _aka = _aka)
+            Attribute(sub_type, self.data, self.uuid, backend=self.backend, _aka=_aka)
 
     def delete(self):
 ##        r = self.backend.find({"_ref" : self.uuid})

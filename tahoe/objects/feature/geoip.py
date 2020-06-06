@@ -1,15 +1,28 @@
+## ----------------- Built-in -----------------
+import logging, os, pathlib
 
 ## ----------------- From PyPI -----------------
-import logging, geoip2.database
+import geoip2.database
 
 
-## ----------------- Not from PyPI -----------------
-from tahoe import Attribute
+## ----------------- From this package  -----------------
+if __name__ in ["__main__", "geoip"]:
+    import sys
+    sys.path.append(os.path.abspath('../..'))
+    from instance import Attribute
+else:
+    from ...instance import Attribute
 
+## ----------------- Load GeoIP DB -----------------
 
-asn_reader = geoip2.database.Reader('D:\\mal_url\\feature\\geolite2\\GeoLite2-ASN.mmdb')
-city_reader = geoip2.database.Reader('D:\\mal_url\\feature\\geolite2\\GeoLite2-City.mmdb')
-country_reader = geoip2.database.Reader('D:\\mal_url\\feature\\geolite2\\GeoLite2-Country.mmdb')
+thisdir = pathlib.Path(__file__).absolute().parent
+asndbpath = os.path.join(thisdir, 'geolite2\\GeoLite2-ASN.mmdb')
+citydbpath = os.path.join(thisdir, 'geolite2\\GeoLite2-City.mmdb')
+countrydbpath = os.path.join(thisdir, 'geolite2\\GeoLite2-Country.mmdb')
+
+asn_reader = geoip2.database.Reader(asndbpath)
+city_reader = geoip2.database.Reader(citydbpath)
+country_reader = geoip2.database.Reader(countrydbpath)
 
 
 def get_geoip_att(ip):

@@ -2,7 +2,6 @@
 *.bat
 *playpen.py
 *.ini
-*.mmdb
 Rubbish/
 input/TEMP/
 

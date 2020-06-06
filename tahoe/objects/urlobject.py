@@ -10,7 +10,6 @@ else:
     from .feature import *
 
  
-    
 import copy, pdb, hashlib 
     
 _MAX_ENRICHMENT_ATTEMPT = 3

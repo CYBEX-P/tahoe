@@ -41,3 +41,30 @@ def get_backend():
     db = client.get_database(db)
     backend = MongoBackend(db, name=coll)
     return backend
+    
+    
+def get_report_db():
+    mongo_url = os.getenv("CYBEXP_API_MONGO_URL")
+    report_db = os.getenv("CYBEXP_API_REPORT_DB", "report_db")
+
+    client = MongoClient(mongo_url)
+    report_db = client.get_database(report_db)
+    
+    return report_db
+    
+def get_query_backend():
+    report_db = get_report_db()
+    
+    if 'query' not in report_db.list_collection_names():
+      report_db.create_collection('query', capped=True, size=9999999, max=999)
+
+    query_backend = MongoBackend(report_db, name='query')
+    
+    return query_backend
+
+    
+def get_report_backend():
+    report_db = get_report_db()
+    report_backend = MongoBackend(report_db, name='report')
+    
+    return report_backend

@@ -6,14 +6,19 @@
 """
 from furl import furl
 from collections import Counter
-import logging, math, re, posixpath
-from tahoe import *
+import logging, math, re, posixpath, os, pathlib
 
+if __name__ in ["__main__", "lexical"]:
+    import sys
+    sys.path.append(os.path.abspath('../..'))
+    from instance import Attribute
+else:
+    from ...instance import Attribute
 
-e = "http://globesecurityservices.com/BzJoVeo0/index.html"
-u = furl(e)
+thisdir = pathlib.Path(__file__).absolute().parent
+tldpath = os.path.join(thisdir, 'tld.txt') 
+with open(tldpath, encoding='utf8') as f: content = f.readlines()
 
-with open('D:\\mal_url\\feature\\tld.txt', encoding='utf8') as f: content = f.readlines()
 _TLD = set([x.strip() for x in content])
 _EXT = {'html', 'htm', 'php', 'css', 'js'}
 _SYMBOL = r"[~$&+,:;=?@#|'<>.^*()%!-]"
@@ -295,10 +300,9 @@ def get_lexical_att(u):
 def example1():
 
     e = r"http://globesecurityservicesgoogle.com/BzJoVeo0/netflix/index.html"
-    u = furl(e)
     
     au = Attribute('url', e)     
-    olf = Object('lexical_features', lexical(u))
+    olf = Object('lexical_features', get_lexical_att(e))
     print(len(olf.data))
 
     # URL Object
@@ -308,7 +312,6 @@ def example1():
 
 if __name__ == "__main__":
     from pprint import pprint
-    import os
     
     config = {
             "mongo_url" : "mongodb://localhost:27017/",
