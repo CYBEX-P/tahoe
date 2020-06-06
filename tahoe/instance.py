@@ -5,44 +5,44 @@ from collections import defaultdict
 import json, pdb, os, pathlib, logging, time, hashlib, math
 
 if __name__ in ["__main__", "instance"]:
-    from backend import get_backend, Backend, MongoBackend, NoBackend
-    from misc import dtresolve, limitskip, branches, features
+  from backend import get_backend, Backend, MongoBackend, NoBackend
+  from misc import dtresolve, limitskip, branches, features, canonical
 else:
-    from .backend import get_backend, Backend, MongoBackend, NoBackend
-    from .misc import dtresolve, limitskip, branches, features
+  from .backend import get_backend, Backend, MongoBackend, NoBackend
+  from .misc import dtresolve, limitskip, branches, features, canonical
 
 ##schema = {k : json.loads(open(((__file__[:-11]+ "schema\\%s.json") %k)).read()) for k in ["attribute","object","event","session","raw"]}
 _ATT_ALIAS = {
-    "asn":["AS"],
-    "btc":["cryptocurrency_address"],
-    "cidr":["ip"],
-    "comment":["text"],
-    "creation_date":["date"],
-    "cve_id":["vulnerability"],
-    "epp_client_code":["epp_status_code"],
-    "epp_server_code":["epp_status_code"],
-    "hex_data":["data"],
-    "imphash":["hash", "checksum"],
-    "ipv4":["ip"],
-    "ipv6":["ip"],
-    "md5":["hash", "checksum"],
-    "pattern":["data"],
-    "pdb":["filepath"],
-    "pehash":["hash", "checksum"],
-    "premium_rate_telephone_number":["prtn", "phone_number"],
-    "sha1":["hash", "checksum"],
-    "sha224":["hash", "checksum"],
-    "sha256":["hash", "checksum"],
-    "sha384":["hash", "checksum"],
-    "sha512":["hash", "checksum"],
-    "sha512/224":["hash", "checksum"],
-    "sha512/256":["hash", "checksum"],
-    "sigma":["siem"],
-    "snort":["nids"],
-    "ssdeep":["hash", "checksum"],
-    "url":["uri"],
-    "user_agent":["http_user_agent"],
-    "yara":["nids"]
+  "asn":["AS"],
+  "btc":["cryptocurrency_address"],
+  "cidr":["ip"],
+  "comment":["text"],
+  "creation_date":["date"],
+  "cve_id":["vulnerability"],
+  "epp_client_code":["epp_status_code"],
+  "epp_server_code":["epp_status_code"],
+  "hex_data":["data"],
+  "imphash":["hash", "checksum"],
+  "ipv4":["ip"],
+  "ipv6":["ip"],
+  "md5":["hash", "checksum"],
+  "pattern":["data"],
+  "pdb":["filepath"],
+  "pehash":["hash", "checksum"],
+  "premium_rate_telephone_number":["prtn", "phone_number"],
+  "sha1":["hash", "checksum"],
+  "sha224":["hash", "checksum"],
+  "sha256":["hash", "checksum"],
+  "sha384":["hash", "checksum"],
+  "sha512":["hash", "checksum"],
+  "sha512/224":["hash", "checksum"],
+  "sha512/256":["hash", "checksum"],
+  "sigma":["siem"],
+  "snort":["nids"],
+  "ssdeep":["hash", "checksum"],
+  "url":["uri"],
+  "user_agent":["http_user_agent"],
+  "yara":["nids"]
 }
 
 LIM=10
@@ -68,7 +68,7 @@ class Instance():
 ##      self.validate()
 
     def unique(self): 
-        unique = self.itype + self.sub_type + self.canonical_data()
+        unique = self.itype + self.sub_type + canonical(self.data)
         return unique.encode('utf-8')
 
     def deduplicate(self):
@@ -94,21 +94,6 @@ class Instance():
             return b
 
         return branch(self.data)
-
-    def canonical_data(self):
-
-        def canonicalize(val):
-            if isinstance(val, dict):
-                r = {k : canonicalize(v) for k,v in val.items()}
-                return str(dict(sorted(r.items())))
-            elif isinstance(val, list):
-                r = [canonicalize(i) for i in val]
-                return str(sorted(list(set(r))))
-            elif isinstance(val, str):
-                val = val.strip()
-            return(str(val))
-
-        return canonicalize(self.data)
 
     def doc(self): return {k:v for k,v in vars(self).items() if v is not None and k not in ['backend','schema']}
 

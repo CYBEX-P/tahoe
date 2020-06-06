@@ -1,3 +1,4 @@
+import json
 from collections import defaultdict
 
 def dtresolve(start : 'int', end: int) -> dict:
@@ -35,4 +36,44 @@ def features(d, sub_type=None, data=None, sep='.', root_only=False):
       for i in range(len(k)):
         r[sep.join(k[-i:])].append(v)
   return {k : list(set(v)) for k,v in r.items()} 
-    
+
+
+def canonical(val):
+  '''same as json.dumps(, sort_keys=True)
+  but lists are also sorted'''
+  if isinstance(val, dict):
+    r = {k : canonical(v) for k,v in val.items()}
+    return json.dumps(r, sort_keys=True)
+  elif isinstance(val, list):
+    r = [canonical(i) for i in val]
+    return json.dumps(sorted(list(set(r))), sort_keys=True)
+  elif isinstance(val, str):
+    val = val.strip()
+  return val
+
+
+def decanonical(s):
+  '''canonical string to python dict'''
+  try:
+    d = json.loads(s)
+    if isinstance(d, dict):
+      for k,v in d.items():
+        d[k] = decanonical(v)
+    elif isinstance(d, list):
+      d = [decanonical(i) for i in d]
+  except:
+    d = s
+  return d
+
+
+
+##def canonicalize(val):
+##    if isinstance(val, dict):
+##        r = {k : canonicalize(v) for k,v in val.items()}
+##        return str(dict(sorted(r.items())))
+##    elif isinstance(val, list):
+##        r = [canonicalize(i) for i in val]
+##        return str(sorted(list(set(r))))
+##    elif isinstance(val, str):
+##        val = val.strip()
+##    return(str(val))

@@ -55,8 +55,8 @@ def get_report_db():
 def get_query_backend():
     report_db = get_report_db()
     
-    if 'query' not in report_db.list_collection_names():
-      report_db.create_collection('query', capped=True, size=9999999, max=999)
+##    if 'query' not in report_db.list_collection_names():
+##      report_db.create_collection('query', capped=True, size=9999999, max=999)
 
     query_backend = MongoBackend(report_db, name='query')
     

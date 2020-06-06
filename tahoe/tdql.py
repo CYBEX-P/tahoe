@@ -1,9 +1,11 @@
 if __name__ in ["__main__", "tdql"]:
     from instance import Instance
     from backend import get_query_backend
+    from misc import canonical
 else: 
     from .instance import Instance
     from .backend import get_query_backend
+    from .misc import canonical
 
 import os
     
@@ -20,7 +22,7 @@ class TDQL(Instance):
     super().__init__(sub_type=sub_type, data=data, **kwargs)
                
   def unique(self):
-    unique = self.itype + self.sub_type + self.canonical_data() + self.userid + str(int(self.timestamp)//60//60)  # expires in an hour
+    unique = self.itype + self.sub_type + canonical(self.data) + self.userid + str(int(self.timestamp)//60//60)  # expires in an hour
     return unique.encode('utf-8')
     
   def setsocket(self, host, port, nonce):
