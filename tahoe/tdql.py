@@ -1,17 +1,14 @@
 if __name__ in ["__main__", "tdql"]:
     from instance import Instance
-    from backend import get_query_backend
     from misc import canonical
 else: 
     from .instance import Instance
-    from .backend import get_query_backend
     from .misc import canonical
 
 import os
     
 
 class TDQL(Instance):
-  backend = get_query_backend() if os.getenv("CYBEXP_API_MONGO_URL") else NoBackend()
   
   def __init__(self, sub_type, data, userid, timestamp, host='localhost', port=0, nonce='', **kwargs):
     self.itype, self.data = 'query', data
@@ -19,7 +16,7 @@ class TDQL(Instance):
     self.status, self.report_id = 'wait', ''
     self._socket = [host, port, nonce]
 
-    super().__init__(sub_type=sub_type, data=data, **kwargs)
+    super().__init__(sub_type=sub_type, **kwargs)
                
   def unique(self):
     unique = self.itype + self.sub_type + canonical(self.data) + self.userid + str(int(self.timestamp)//60//60)  # expires in an hour
