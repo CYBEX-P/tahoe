@@ -3,7 +3,8 @@
 import pdb
 import unittest
 
-from tahoe import Instance, Attribute, Object, MongoBackend
+from tahoe import Instance, Attribute, Object
+from tahoe.backend import MongoBackend, MockMongoBackend
 from tahoe.tests.backend_test import MongoBackendTest
 
 
@@ -255,7 +256,7 @@ class AddRemoveInstanceTest(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        assert isinstance(Object._backend, MongoBackend)
+        assert isinstance(Object._backend, (MongoBackend, MockMongoBackend))
         Attribute._backend.drop()
 
     def test00(self):

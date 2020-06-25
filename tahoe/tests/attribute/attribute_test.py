@@ -3,7 +3,8 @@
 import pdb
 import unittest
 
-from tahoe import Attribute, MongoBackend
+from tahoe import Attribute
+from tahoe.backend import MongoBackend, MockMongoBackend
 from tahoe.tests.backend_test import MongoBackendTest
 
 
@@ -119,7 +120,7 @@ class CountTest(unittest.TestCase):
     
     @classmethod
     def setUpClass(cls):
-        assert isinstance(Attribute._backend, MongoBackend)
+        assert isinstance(Attribute._backend, (MongoBackend, MockMongoBackend))
         Attribute._backend.drop()  
         
 
@@ -155,7 +156,7 @@ class DeleteTest(unittest.TestCase):
     
     @classmethod
     def setUpClass(cls):
-        assert isinstance(Attribute._backend, MongoBackend)
+        assert isinstance(Attribute._backend, (MongoBackend, MockMongoBackend))
         Attribute._backend.drop()
 
     def testdelete(self):

@@ -1,9 +1,15 @@
-"""`unittest`s for tahoe.attribute.attribute.py"""
+"""`unittest`s for tahoe.event.event.py"""
+
+if __name__ != 'tahoe.tests.event.evnt_test':
+    import sys
+    sys.path += ['..', '../..', '../../..']
+    del sys
 
 import pdb
 import unittest
 
-from tahoe import Instance, Attribute, Object, Event, MongoBackend
+from tahoe import Instance, Attribute, Object, Event
+from tahoe.backend import MongoBackend, MockMongoBackend
 from tahoe.tests.backend_test import MongoBackendTest
 
 
@@ -63,7 +69,7 @@ class InitTest(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        assert isinstance(Event._backend, MongoBackend)
+        assert isinstance(Event._backend, (MongoBackend, MockMongoBackend))
         Event._backend.drop()
 
     def test_init(self):
@@ -117,7 +123,7 @@ class InitTest(unittest.TestCase):
 class CategoryTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        assert isinstance(Event._backend, MongoBackend)
+        assert isinstance(Event._backend, (MongoBackend, MockMongoBackend))
         Event._backend.drop()
 
     def __init__(self, *args, **kwargs):
@@ -163,8 +169,8 @@ class CategoryTest(unittest.TestCase):
         self.assertEqual(e.category, 'malicious')
         self.assertEqual(e_d['category'], 'malicious')
 
-    def test9(self):
-        pass
+
+
         
         
 

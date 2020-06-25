@@ -14,6 +14,7 @@ import pdb
 
 from pymongo import MongoClient
 from pymongo.collection import Collection
+import mongomock
 
 
 class Backend:
@@ -115,8 +116,19 @@ class MongoBackend(Collection, Backend):
         return f"MongoBackend('{host}:{port}', '{dbname}', '{collname}')"
 
 
+class MockMongoBackend(mongomock.Collection, Backend):
+    def __init__(self, mongo_url=None, dbname="tahoe_db",
+                 collname="instance", create=False, **kwargs):
+        client = mongomock.MongoClient(mongo_url)
+        db = client.get_database(dbname)
+        Backend.__init__(self)
+        mongomock.Collection.__init__(self, db, collname, db._store)
 
-
+    def __repr__(self):
+        host, port = self.database.client.address
+        dbname = self.database.name
+        collname = self.name
+        return f"MongoBackend('{host}:{port}', '{dbname}', '{collname}')"
 
 
 

@@ -4,6 +4,11 @@ Testing tahoe\_backend.py
 Needs MongoDB at localhost:27017 (without auth) to run tests.
 """
 
+if __name__ != 'tahoe.tests.event.evnt_test':
+    import sys
+    sys.path += ['..', '../..']
+    del sys
+
 import pdb
 import unittest
 
@@ -20,12 +25,17 @@ class MongoBackendTest(unittest.TestCase):
     def setUpClass(cls):
         from pymongo import MongoClient
         from pymongo.errors import ConnectionFailure
-        client = MongoClient()
-
-        client.admin.command('ismaster')
-        _backend = MongoBackend(dbname="1ef0534d-6ef7-4624-84c2-7bf59f1b3927")
-        _backend.drop()
-        cls._backend = _backend
+        dbname = "1ef0534d-6ef7-4624-84c2-7bf59f1b3927"
+        try:
+            raise ConnectionFailure  # debug delete me
+            client = MongoClient()
+            client.admin.command('ismaster')
+            _backend = MongoBackend(dbname=dbname)
+            _backend.drop()
+            cls._backend = _backend
+        except ConnectionFailure:
+            _backend = MockMongoBackend(dbname=dbname)
+            cls._backend = _backend
         return _backend
 
     @classmethod
