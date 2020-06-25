@@ -1,7 +1,15 @@
-name = "tahoe"
+import sys
+if sys.version_info < (3, 8) or sys.version_info >= (3,9):
+    import warnings
+    warnings.warn("tahoe is tested on Python 3.8 only")
+    
 
+from .instance import Instance, OES
+from .attribute import Attribute
 from .backend import Backend, NoBackend, MongoBackend
-from .instance import parse, Attribute, Object, Event, Session, Raw
-from .objects import UrlObject
-from .misc import features
-from .tdql import TDQL
+from .event import Event
+from .object_ import Object
+from .parse import parse, _create_itype_class_map
+
+_create_itype_class_map()
+
