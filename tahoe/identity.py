@@ -1,7 +1,7 @@
 """
-User = UserModel in flask code see = https://github.com/CYBEX-P/cybexp-cs/blob/5707b87e9166470ce48d884e11d8d677ec1cfeee/api/models.py#L4
-Additional = Org, Config
-IdentityBackend: query database
+User: similar to UserModel in flask code; see https://github.com/CYBEX-P/cybexp-cs/blob/5707b87e9166470ce48d884e11d8d677ec1cfeee/api/models.py#L4
+Additional classes: Org, Config
+IdentityBackend: to query database easily
 User: create, modify user, get JWT token etc.
 Org: create org, add user, get JWT token etc.
 
@@ -37,8 +37,11 @@ import hashlib, uuid, jwt, pdb
 
 
 # ==== Globals ====
-
-P = {"_id":0}
+"""
+All documents in MongoDB has unique _id field. _id is not part of TAHOE. 
+projection={"_id":0}, in a query means do not fetch the _id field.
+"""
+P = {"_id":0} 
 
 
 
@@ -54,14 +57,24 @@ class UserError(Exception):
 # ==== Class Backend ====
 
 class IdentityBackend(MongoBackend):
+  """
+  A TAHOE Backend stores data; has methods like find_one, insert_one etc.
+  MongoBackend inherits Backend; stores data in MongoDB.
+  IdentityBackend stores Users, Orgs, InputConfig etc.
+  IdentityBackend has special methods to lookup Users, Orgs etc.
+  """
+
   def finduser(self, email, projection=P):
+    """
+    find user by email address, email is unique id of user in TAHOE
+    """
+    
     tempuser = User(email, backend=NoBackend())
     return self.backend.find_one({"_hash" : tempuser._hash}, projection)
 
   def userexists(self, email):
     return self.finduser(email, {**P, "uuid":1}) is not None
     
-
 
 
 # ==== Class Identity ====
@@ -75,6 +88,8 @@ class Identity():
   def __init__(self, **kwargs):
     if not hasattr(self, 'uuid') or not self.uuid:
       self.uuid = 'identity--' + str(uuid.uuid4())
+
+    # self.create_index(uuid, _hash, )
 
   def getpayload(self, token, **kwargs): # kwargs for secret and algo
     secret, algo = kwargs.get('secret', self.secret), kwargs.get('algo', self.algo)
@@ -105,6 +120,9 @@ class User(Identity, Object):
     Object.__init__(self, sub_type='user', data=[email, password, name], **kwargs)
 
   def __repr__(self): return f"User('{self.data['useremail'][0]}')" # put repr in eval to get the user object
+
+  def addconfig(self, jsonfile):
+    pass
 
   def changepass(self, newpassword):
     if not all([isinstance(newpassword, str) or 7 < len(newpassword) or 64 < len(newpassword)]):
@@ -149,7 +167,10 @@ class Org(Identity, Object):
 
   def addadmin(self, user):
     pass
-
+  
+  def addconfig(self, config):
+    pass
+  
   def adduser(self, user):
     if not isinstance(user, User):
       raise TypeError(f"unsupported user type: '{str(type(user))}', excpected tahoe.identity.User")
@@ -173,19 +194,40 @@ class Org(Identity, Object):
     self.update({'_usr_ref':self._usr_ref})
     self.remove_instance(user)
 
-
   def unique(self):
     unique = self.itype + self.sub_type + self.data['orgname'][0]
     return unique.encode('utf-8')
 
 
-
 # ==== Class Config ====
 
-class Config(Object):
+class InputConfig(Identity, Object):
+##  def __init__(self, pythondict):
+##    #put everything in a Raw
+##    pass
+  
+  def __init__(self, name, plugin, typetag, orgid, timezone, **kwargs):
+    
+    if not hasattr(self, 'uuid') or not self.uuid:
+      self.uuid = 'object--' + str(uuid.uuid4())
+
+    name = Attribute('name', name, backend=self.backend) # human_name
+    plugin = Attribute('plugin', plugin, backend=self.backend) # plugin_name
+    typetag = Attribute('typetag', typetag, backend=self.backend) # archive_processing_typetag
+    orgid = Attribute('orgid', orgid, backend=self.backend) # organization id
+    timezone = Attribute('timezone', timezone, backend=self.backend)
+
+    Identity.__init__(self, **kwargs)
+
+    if not hasattr(self, data): self.data=[] # child class will pass data in self.data
+    Object.__init__(self, sub_type='input_config', data = self.data + [name, plugin, typetag, orgid, timezone], **kwargs)
+
+
+class WebSocketConfig(InputConfig):
   pass
 
-
+class InputPlugin():
+  pass
 
 
 ####def example1():

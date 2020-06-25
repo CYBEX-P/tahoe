@@ -7,6 +7,7 @@ else:
 
 import os
     
+# class ThreatQL()
 
 class TDQL(Instance):
   
@@ -16,6 +17,9 @@ class TDQL(Instance):
     self.status, self.report_id = 'wait', ''
     self._socket = [host, port, nonce]
 
+    # if force_redo flag is set,
+    # self.unique = randoom number
+
     super().__init__(sub_type=sub_type, **kwargs)
                
   def unique(self):
@@ -24,3 +28,5 @@ class TDQL(Instance):
     
   def setsocket(self, host, port, nonce):
     self.update( {'_socket' : [host, port, nonce]} )
+
+

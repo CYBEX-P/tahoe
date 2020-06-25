@@ -1,7 +1,7 @@
 import json
 from collections import defaultdict
 
-def dtresolve(start : 'int', end: int) -> dict:
+def dtresolve(start , end) -> dict:
   d = defaultdict(dict)
   if start: d['timestamp']['$gte'] = start
   if end: d['timestamp']['$lte'] = end
@@ -43,12 +43,14 @@ def canonical(val):
   but lists are also sorted'''
   if isinstance(val, dict):
     r = {k : canonical(v) for k,v in val.items()}
-    return json.dumps(r, sort_keys=True)
+    val = json.dumps(r, sort_keys=True)
   elif isinstance(val, list):
     r = [canonical(i) for i in val]
-    return json.dumps(sorted(list(set(r))), sort_keys=True)
+    val = json.dumps(sorted(list(set(r))), sort_keys=True)
   elif isinstance(val, str):
-    val = val.strip()
+    val = json.dumps(val.strip())
+  else:
+    val = json.dumps(val)
   return val
 
 
