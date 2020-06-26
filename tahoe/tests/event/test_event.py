@@ -1,6 +1,6 @@
 """`unittest`s for tahoe.event.event.py"""
 
-if __name__ != 'tahoe.tests.event.evnt_test':
+if __name__ != 'tahoe.tests.event.event_test':
     import sys
     sys.path += ['..', '../..', '../../..']
     del sys
@@ -203,8 +203,8 @@ class ContextTest(unittest.TestCase):
         assert isinstance(Event._backend, (MongoBackend, MockMongoBackend))
         Event._backend.drop()
 
-    def nocontext(self):
-        raise AssertionError
+    def testshouldfail(self):
+        raise Exception
 
     
         
