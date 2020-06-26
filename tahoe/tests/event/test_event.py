@@ -10,7 +10,7 @@ import unittest
 
 from tahoe import Instance, Attribute, Object, Event
 from tahoe.backend import MongoBackend, MockMongoBackend
-from tahoe.tests.backend_test import MongoBackendTest
+from tahoe.tests.test_backend import MongoBackendTest
 
 
 def setUpModule():

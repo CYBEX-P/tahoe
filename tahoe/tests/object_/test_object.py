@@ -5,12 +5,13 @@ import unittest
 
 from tahoe import Instance, Attribute, Object
 from tahoe.backend import MongoBackend, MockMongoBackend
-from tahoe.tests.backend_test import MongoBackendTest
-
+from tahoe.tests.test_backend import MongoBackendTest
 
 def setUpModule():
     _backend = MongoBackendTest.setUpClass()
     Instance.set_backend(_backend)
+
+    
 
 def tearDownModule():
     MongoBackendTest.tearDownClass()
@@ -27,6 +28,7 @@ class SetBackendTest(unittest.TestCase):
         >>> Instance.set_backend(_backend)
 
     Wrong ways to set default backend::
+        >>> Object._backend = MongoBackend() # wrong
 
         >>> from tahoe import NoBackend, MongoBackend
         >>> no_backend = NoBackend()
@@ -58,8 +60,10 @@ class SetBackendTest(unittest.TestCase):
         >>> Attribute._backend
         NoBackend()
     """
-    pass
-
+    def test_backend(self):
+        self.assertIs(Attribute._backend, Object._backend)
+        self.assertIs(Attribute._backend, Instance._backend)
+        self.assertIs(Instance._backend, Object._backend)
 
     
 class SubTypeTest(unittest.TestCase):
@@ -287,6 +291,7 @@ class AddRemoveInstanceTest(unittest.TestCase):
         a2 = Attribute('password', '123456')      
         a3 = Attribute('password', 'abcdef')
         o1 = Object('user', [a1, a2, a3])
+        
         o1.remove_instance(a2)
 
         self.assertEqual(o1.data['password'][0], 'abcdef')

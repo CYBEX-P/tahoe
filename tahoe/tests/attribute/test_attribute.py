@@ -3,14 +3,14 @@
 import pdb
 import unittest
 
-from tahoe import Attribute
+from tahoe import Instance, Attribute
 from tahoe.backend import MongoBackend, MockMongoBackend
-from tahoe.tests.backend_test import MongoBackendTest
+from tahoe.tests.test_backend import MongoBackendTest
 
 
 def setUpModule():
     _backend = MongoBackendTest.setUpClass()
-    Attribute.set_backend(_backend)
+    Instance.set_backend(_backend)
 
 def tearDownModule():
     MongoBackendTest.tearDownClass()
