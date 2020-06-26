@@ -17,8 +17,25 @@ def setUpModule():
     _backend = MongoBackendTest.setUpClass()
     Instance.set_backend(_backend)
 
+    assert Attribute._backend is Event._backend
+    assert Object._backend is Event._backend
+    assert Event._backend is Instance._backend
+   
+
 def tearDownModule():
     MongoBackendTest.tearDownClass()
+
+
+def make_test_data():
+    import builtins
+    builtins.afn = Attribute('filename', 'virus.exe')
+    builtins.afs = Attribute('filesize', 20012)
+    builtins.of = Object('file', [afn, afs])
+    builtins.au = Attribute('url', 'example.com')
+
+    builtins.orgid = 'a441b15fe9a3cf56661190a0b93b9dec7d041272' \
+                '88cc87250967cf3b52894d11'''
+    builtins.timestamp = 100
 
 
 class SetBackendTest(unittest.TestCase):
@@ -30,8 +47,18 @@ class SetBackendTest(unittest.TestCase):
         >>> from tahoe import Instance, Attribute, Object, MongoBackend
         >>> _backend = MongoBackend()
         >>> Instance.set_backend(_backend)
+        >>> Instance._backend
+        MongoBackend("localhost:27017", "tahoe_db", "instance")
+        >>> Attribute._backend is Instance._backend
+        True
+        >>> Object._backend is Instance._backend
+        True
+        >>> Event._backend is Instance._backend
+        
 
     Wrong ways to set default backend::
+
+        >>> Attribute._backend = MongoBackend()
 
         >>> from tahoe import NoBackend, MongoBackend
         >>> no_backend = NoBackend()
@@ -170,8 +197,16 @@ class CategoryTest(unittest.TestCase):
         self.assertEqual(e_d['category'], 'malicious')
 
 
+class ContextTest(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        assert isinstance(Event._backend, (MongoBackend, MockMongoBackend))
+        Event._backend.drop()
 
-        
+    def nocontext(self):
+        raise AssertionError
+
+    
         
 
     
