@@ -196,8 +196,7 @@ class Instance():
 
     @classmethod
     def set_backend(cls, _backend):
-        cls._backend = _backend   
-
+        cls._backend = _backend
 
     # Protected & Private methods
 
@@ -339,7 +338,7 @@ class OES(Instance):
             remove_data_ref.add(i._hash)
 
         new_data = add_data
-        q = {'_hash': {'$in': self._cref}, '_isalias': {'$ne': True}}
+        q = {'_hash': {'$in': self._cref}}
         for i in self._backend.find(q, _P):
             if i['_hash'] not in remove_data_ref:
                 new_data.append(parse(i, self._backend, validate=False))

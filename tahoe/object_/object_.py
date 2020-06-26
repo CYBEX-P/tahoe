@@ -31,7 +31,7 @@ __author__ = 'Farhan Sadique <qclass@protonmail.com>'
 __date__ = '20 June 2020'
 
 
-if __name__ != 'tahoe.attribute.attribute':
+if __name__ != 'tahoe.object.object':
     import sys
     sys.path += ['..', '../..']
     del sys

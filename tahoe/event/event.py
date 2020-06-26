@@ -57,7 +57,7 @@ __date__ = '21 June 2020'
 
 import pdb
 
-if __name__ != 'tahoe.attribute.attribute':
+if __name__ != 'tahoe.event.event':
     import sys
     sys.path += ['..', '../..']
     del sys
