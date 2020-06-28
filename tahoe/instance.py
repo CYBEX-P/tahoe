@@ -32,12 +32,12 @@ if __name__ in ["__main__", "instance"]:
     from backend import Backend, NoBackend
     from misc import dtresolve, limitskip, branches, features, canonical
     from parse import parse, ITYPE_CLASS_MAP
-    from error import DependencyError
+    from error import DependencyError, BackendError
 else:
     from .backend import Backend, NoBackend
     from .misc import dtresolve, limitskip, branches, features, canonical
     from .parse import parse, ITYPE_CLASS_MAP
-    from .error import DependencyError
+    from .error import DependencyError, BackendError
   
 
 # === Global Variables ===
@@ -214,6 +214,8 @@ class Instance():
         
         ret = self._backend.find_one_and_update(
             {"_hash":self._hash}, {"$set":update}, _P, return_document=True)
+        if ret is None:
+            raise BackendError('cannot find instance in backend')
         for k, v in ret.items():
             setattr(self, k, v)
 

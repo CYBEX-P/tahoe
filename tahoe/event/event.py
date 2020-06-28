@@ -337,7 +337,7 @@ class Event(tahoe.OES):
             raise ValueError("input argumetns in data, context pairs")
 
         ben_data, mal_data, unk_data = None, None, None
-
+        
         argsiter = iter([data, context] + list(args))
         for data, context in zip(argsiter, argsiter):
             if context == 'benign' and ben_data is None:
@@ -355,9 +355,8 @@ class Event(tahoe.OES):
 
     
     def _make_context_ref(self, ben_data=None, mal_data=None, unk_data=None):
-
-        if not ben_data and mal_data and unk_data:
-            return
+        if not (ben_data or mal_data or unk_data):
+            return [], []
 
         if ben_data:
             ben_data = self._validate_data(ben_data, ['attribute', 'object'])
@@ -378,22 +377,22 @@ class Event(tahoe.OES):
             new_unk = set()
 
         if new_ben.intersection(new_mal):
-            raise ValueError("instance cannot be both benign and malicious: " +
+            raise ValueError("instance can't be both benign and malicious: " +
                              f"{new_ben.intersection(new_mal)}")
         if new_mal.intersection(new_unk):
-            raise ValueError("instance cannot be both malicious and unknown: " +
+            raise ValueError("instance can't be both malicious and unknown: " +
                              f"{new_mal.intersection(new_unk)}")
         if new_unk.intersection(new_ben):
-            raise ValueError("instance cannot be both benign and unknown: " +
+            raise ValueError("instance can't be both benign and unknown: " +
                              f"{new_unk.intersection(new_ben)}")
 
         new_tot = new_ben.union(new_mal.union(new_unk))
-        set_cref = set(self._cref)
+        set_ref = set(self._ref)
         set_ben_ref = set(self._ben_ref)
         set_mal_ref = set(self._mal_ref)
         
-        if not new_tot.issubset(set_cref):
-            raise ValueError("instance not a child: {new_tot - set_cref}")
+        if not new_tot.issubset(set_ref):
+            raise ValueError("instance not a child: {new_tot - set_ref}")
 
         for h in new_ben:
             set_ben_ref.add(h)
@@ -403,7 +402,7 @@ class Event(tahoe.OES):
             set_mal_ref.add(h)
         for h in new_unk:
             if h in set_ben_ref: set_ben_ref.remove(h)
-            elif h in set_mal_ref: set_mal_ref.remove()
+            elif h in set_mal_ref: set_mal_ref.remove(h)
 
         return list(set_ben_ref), list(set_mal_ref)
     

@@ -37,6 +37,8 @@ def make_test_data():
                 '88cc87250967cf3b52894d11'''
     builtins.timestamp = 100
 
+    builtins.e = Event('file_download', [au, of], orgid, timestamp)
+
 
 class SetBackendTest(unittest.TestCase):
     """
@@ -202,11 +204,200 @@ class ContextTest(unittest.TestCase):
     def setUpClass(cls):
         assert isinstance(Event._backend, (MongoBackend, MockMongoBackend))
         Event._backend.drop()
+        make_test_data()
 
-    def testshouldfail(self):
-        raise Exception
+    def test_01_benign(self):
+        e_d = e._backend.find_one({'_hash': e._hash})
 
-    
+        self.assertNotIn(au._hash, e._ben_ref)
+        self.assertNotIn(au._hash, e_d['_ben_ref'])
+        
+        e.set_context(au, 'benign')
+        e_d = e._backend.find_one({'_hash': e._hash})
+
+        self.assertIn(au._hash, e._ben_ref)
+        self.assertIn(au._hash, e_d['_ben_ref'])
+
+    def test_02_change_to_malicious(self):
+        e_d = e._backend.find_one({'_hash': e._hash})
+
+        self.assertIn(au._hash, e._ben_ref)
+        self.assertIn(au._hash, e_d['_ben_ref'])
+
+        e.set_context(au, 'malicious')
+        e_d = e._backend.find_one({'_hash': e._hash})
+
+        self.assertNotIn(au._hash, e._ben_ref)
+        self.assertNotIn(au._hash, e_d['_ben_ref'])
+
+        self.assertIn(au._hash, e._mal_ref)
+        self.assertIn(au._hash, e_d['_mal_ref'])
+
+    def test_03_change_to_unknown(self):
+        e_d = e._backend.find_one({'_hash': e._hash})
+
+        self.assertIn(au._hash, e._mal_ref)
+        self.assertIn(au._hash, e_d['_mal_ref'])
+
+        e.set_context(au, 'unknown')
+        e_d = e._backend.find_one({'_hash': e._hash})
+
+        self.assertNotIn(au._hash, e._ben_ref)
+        self.assertNotIn(au._hash, e_d['_ben_ref'])
+
+        self.assertNotIn(au._hash, e._mal_ref)
+        self.assertNotIn(au._hash, e_d['_mal_ref'])
+        
+        
+    def test_04_set_multiple_context_together(self):
+        e.set_context(au, 'benign', of, 'malicious')
+        e_d = e._backend.find_one({'_hash': e._hash})
+
+        self.assertIn(au._hash, e._ben_ref)
+        self.assertIn(au._hash, e_d['_ben_ref'])
+
+        self.assertIn(of._hash, e._mal_ref)
+        self.assertIn(of._hash, e_d['_mal_ref'])
+
+    def test_05_typeerror_wrong_datatype(self):
+        self.assertRaises(TypeError, e.set_context, 2, 'malicious')
+        self.assertRaises(TypeError, e.set_context, [2], 'benign')
+        self.assertRaises(TypeError, e.set_context, {au}, 'unknown')
+
+    def test_06_valueerror_same_data_multiple_context(self):
+        self.assertRaises(ValueError,
+                          e.set_context, au, 'benign', au, 'malicious')
+        self.assertRaises(ValueError,
+                          e.set_context, au, 'malicious', au, 'unknown')
+        self.assertRaises(ValueError,
+                          e.set_context, au, 'unknown', au, 'benign')
+
+    def test_07_valueerror_wrong_context(self):
+        self.assertRaises(ValueError, e.set_context, au, 'wrong_context')
+        self.assertRaises(ValueError, e.set_context, au, 5)
+
+    def test_08_valueerror_same_context_twice(self):
+        self.assertRaises(ValueError,
+                          e.set_context, au, 'benign', of, 'benign')
+        self.assertRaises(ValueError,
+                          e.set_context, au, 'malicious', of, 'malicious')
+        self.assertRaises(ValueError,
+                          e.set_context, au, 'unknown', of, 'unknown')
+
+    def test_09_multiple_data(self):
+        e.set_context([au, of], 'benign')
+        e_d = e._backend.find_one({'_hash': e._hash})
+
+        self.assertIn(au._hash, e._ben_ref)
+        self.assertIn(au._hash, e_d['_ben_ref'])
+        self.assertIn(of._hash, e._ben_ref)
+        self.assertIn(of._hash, e_d['_ben_ref'])
+
+        e.set_context([au, of], 'malicious')
+        e_d = e._backend.find_one({'_hash': e._hash})
+
+        self.assertNotIn(au._hash, e._ben_ref)
+        self.assertNotIn(au._hash, e_d['_ben_ref'])
+        self.assertNotIn(of._hash, e._ben_ref)
+        self.assertNotIn(of._hash, e_d['_ben_ref'])
+        self.assertIn(au._hash, e._mal_ref)
+        self.assertIn(au._hash, e_d['_mal_ref'])
+        self.assertIn(of._hash, e._mal_ref)
+        self.assertIn(of._hash, e_d['_mal_ref'])
+
+        e.set_context([au, of], 'unknown')
+        e_d = e._backend.find_one({'_hash': e._hash})
+
+        self.assertNotIn(au._hash, e._mal_ref)
+        self.assertNotIn(au._hash, e_d['_mal_ref'])
+        self.assertNotIn(of._hash, e._mal_ref)
+        self.assertNotIn(of._hash, e_d['_mal_ref'])
+
+    def test_10_gradnchild(self):
+        e.set_context(afn, 'benign', afs, 'malicious')
+        e_d = e._backend.find_one({'_hash': e._hash})
+
+        self.assertNotIn(afn._hash, e._mal_ref)
+        self.assertNotIn(afn._hash, e_d['_mal_ref'])
+        self.assertNotIn(afs._hash, e._ben_ref)
+        self.assertNotIn(afs._hash, e_d['_ben_ref'])
+        self.assertIn(afn._hash, e._ben_ref)
+        self.assertIn(afn._hash, e_d['_ben_ref'])
+        self.assertIn(afs._hash, e._mal_ref)
+        self.assertIn(afs._hash, e_d['_mal_ref'])
+
+    def test_11_child_and_grandchild(self):
+        Event._backend.drop()
+        make_test_data()
+        
+        e.set_context([afn, au, of], 'malicious', [afs], 'benign')
+        e.set_context(afn, 'benign', au, 'malicious', afs, 'unknown')
+        e_d = e._backend.find_one({'_hash': e._hash})
+
+        self.assertNotIn(afn._hash, e._mal_ref)
+        self.assertIn(afn._hash, e._ben_ref)
+        self.assertNotIn(au._hash, e._ben_ref)
+        self.assertIn(au._hash, e._mal_ref)
+        self.assertNotIn(afs._hash, e._ben_ref)
+        self.assertNotIn(afs._hash, e._mal_ref)
+
+        self.assertNotIn(afn._hash, e_d['_mal_ref'])
+        self.assertIn(afn._hash, e_d['_ben_ref'])
+        self.assertNotIn(au._hash, e_d['_ben_ref'])
+        self.assertIn(au._hash, e_d['_mal_ref'])
+        self.assertNotIn(afs._hash, e_d['_ben_ref'])
+        self.assertNotIn(afs._hash, e_d['_mal_ref'])
+
+        
+        
+
+
+class CategoryTest(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        assert isinstance(Event._backend, (MongoBackend, MockMongoBackend))
+        Event._backend.drop()
+        make_test_data()
+
+    def test_category_benign(self):
+        e.set_category('benign')
+        e_d = e._backend.find_one({'_hash': e._hash})
+
+        self.assertEqual(e.category, 'benign')
+        self.assertEqual(e_d['category'], 'benign')
+
+    def test_category_malicious(self):
+        e.set_category('malicious')
+        e_d = e._backend.find_one({'_hash': e._hash})
+
+        self.assertEqual(e.category, 'malicious')
+        self.assertEqual(e_d['category'], 'malicious')
+
+    def test_category_unknown(self):
+        e.set_category('unknown')
+        e_d = e._backend.find_one({'_hash': e._hash})
+
+        self.assertEqual(e.category, 'unknown')
+        self.assertEqual(e_d['category'], 'unknown')
+
+    def test_category_multiple(self):
+        e.set_category('unknown')
+        e_d = e._backend.find_one({'_hash': e._hash})
+
+        self.assertEqual(e.category, 'unknown')
+        self.assertEqual(e_d['category'], 'unknown')
+
+        e.set_category('malicious')
+        e_d = e._backend.find_one({'_hash': e._hash})
+
+        self.assertEqual(e.category, 'malicious')
+        self.assertEqual(e_d['category'], 'malicious')
+
+        e.set_category('benign')
+        e_d = e._backend.find_one({'_hash': e._hash})
+
+        self.assertEqual(e.category, 'benign')
+        self.assertEqual(e_d['category'], 'benign')
         
 
     
