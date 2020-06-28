@@ -261,8 +261,8 @@ class Event(tahoe.OES):
 
 
     def isparent(self, data):
-        data = self._validate_data(data)
-        return all([I in self._cref for I in data])
+        data = self._validate_data(data, ['attribute', 'object'])
+        return all([I._hash in self._ref for I in data])
 
     def set_category(self, category):
         """

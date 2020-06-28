@@ -348,6 +348,28 @@ class ContextTest(unittest.TestCase):
         self.assertNotIn(afs._hash, e_d['_ben_ref'])
         self.assertNotIn(afs._hash, e_d['_mal_ref'])
 
+    def test_12_get_context_child(self):
+        Event._backend.drop()
+        make_test_data()
+        cntxt = e.get_context(au)
+        self.assertEqual(cntxt[0], 'unknown')
+
+    def test_13_get_context_grand_child(self):
+        cntxt = e.get_context(afn)
+        self.assertEqual(cntxt[0], 'unknown')
+
+    def test_14_changed(self):
+        e.set_context(afn, 'malicious', of, 'benign')
+        self.assertEqual(e.get_context(afn)[0], 'malicious')
+        self.assertEqual(e.get_context(of)[0], 'benign')
+
+    def test_15_get_context_multiple(self):
+        cntxt = e.get_context([afn, of])
+        self.assertEqual(cntxt, ['malicious', 'benign'])
+
+        cntxt = e.get_context([of, au, afn])
+        self.assertEqual(cntxt, ['benign', 'unknown', 'malicious'])
+
         
         
 

@@ -221,8 +221,12 @@ class Object(tahoe.OES):
 
         if context != "all":
             self._validate_param(context=context)
-        switch = {'all': '_ref', 'benign': '_ben_ref', 'malicious': '_mal_ref'}
-        q[switch.get[context]] = self._hash
+        switch = {'all': '_ref', 'benign': '_ben_ref',
+                  'malicious': '_mal_ref', 'unknown': '_ref'}
+        q[switch.get(context)] = self._hash
+        if context == 'unknown':
+            q['_ben_ref'] = {'$ne': self._hash}
+            q['_mal_ref'] = {'$ne': self._hash}
             
         return self._backend.find(q, p, **limitskip(limit, skip, page))   
 

@@ -16,7 +16,10 @@ if __name__ != 'tahoe.attribute.attribute':
 import tahoe
 
 
+
 # === Global Variables ===
+
+dtresolve = tahoe.misc.dtresolve
 
 _P = {'_id': 0}
 """Default projection for MongoDB queries"""
@@ -143,7 +146,7 @@ class Attribute(tahoe.Instance):
 
     # Public methods in alphabetical order    
         
-    def count(self, start=0, end=None, category='all', context='all'):
+    def count(self, start=0, end=0, category='all', context='all'):
         """
         Count the number of events where this attribute is seen.
 
@@ -151,8 +154,8 @@ class Attribute(tahoe.Instance):
         ----------
         start : int or float, default=0
             Unix time (UTC). Count events newer than `start`.
-        end : int or float, default=None
-            Unix time (UTC). Count events older than `end`, default now.
+        end : int or float, default=0
+            Unix time (UTC). Count events older than `end`. 0 means now.
         category: {"all", "benign", "malicious", "unknown"},
         default="all"
             If "malicious", count only malicious events.
@@ -165,18 +168,24 @@ class Attribute(tahoe.Instance):
         count : int
         """
         
-        self._validate_param(start=start, end=end, category=category, 
-                             context=context)
+        self._validate_param(start=start, end=end)
 
         q = {"itype": "event", **dtresolve(start, end)}
 
-        if category != 'all':
+        if category != "all":
+            self._validate_param(category=category)
             q['category'] = category
 
-        switch = {'all': '_ref', 'benign': '_ben_ref', 'malicious': '_mal_ref'}
-        q[switch.get[context]] = self._hash
+        if context != "all":
+            self._validate_param(context=context)
+        switch = {'all': '_ref', 'benign': '_ben_ref',
+                  'malicious': '_mal_ref', 'unknown': '_ref'}
+        q[switch.get(context)] = self._hash
+        if context == 'unknown':
+            q['_ben_ref'] = {'$ne': self._hash}
+            q['_mal_ref'] = {'$ne': self._hash}
         
-        return self._backend.count(q)
+        return self._backend.count_documents(q)
 
     def events(self, p=_P, start=0, end=None, limit=0, skip=0, page=1,
               category='all', context='all'):
@@ -223,8 +232,12 @@ class Attribute(tahoe.Instance):
 
         if context != "all":
             self._validate_param(context=context)
-        switch = {'all': '_ref', 'benign': '_ben_ref', 'malicious': '_mal_ref'}
-        q[switch.get[context]] = self._hash
+        switch = {'all': '_ref', 'benign': '_ben_ref',
+                  'malicious': '_mal_ref', 'unknown': '_ref'}
+        q[switch.get(context)] = self._hash
+        if context == 'unknown':
+            q['_ben_ref'] = {'$ne': self._hash}
+            q['_mal_ref'] = {'$ne': self._hash}
             
         return self._backend.find(q, p, **limitskip(limit, skip, page))    
 

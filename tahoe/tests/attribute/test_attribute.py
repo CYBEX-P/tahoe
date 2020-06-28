@@ -3,7 +3,7 @@
 import pdb
 import unittest
 
-from tahoe import Instance, Attribute
+from tahoe import Instance, Attribute, Event
 from tahoe.backend import MongoBackend, MockMongoBackend
 from tahoe.tests.test_backend import MongoBackendTest
 
@@ -11,6 +11,10 @@ from tahoe.tests.test_backend import MongoBackendTest
 def setUpModule():
     _backend = MongoBackendTest.setUpClass()
     Instance.set_backend(_backend)
+
+    import builtins
+    builtins.orgid = 'a441b15fe9a3cf56661190a0b93b9dec7d041272' \
+                '88cc87250967cf3b52894d11'''
 
 def tearDownModule():
     MongoBackendTest.tearDownClass()
@@ -91,7 +95,99 @@ class SubTypeTest(unittest.TestCase):
         self.assertRaises(ValueError, Attribute, 'str-w-minus', 'test')
 
     def test_value_underscore(self):
-        a = Attribute('test_attribute', 'test')        
+        a = Attribute('test_attribute', 'test')
+        
+
+class CountTest(unittest.TestCase):
+    """
+    Example
+    -------
+    a1 = Atribute('ip', '1.1.1.1')
+    e1 = Event
+    """
+    
+    @classmethod
+    def setUpClass(cls):
+        assert isinstance(Attribute._backend, (MongoBackend, MockMongoBackend))
+        Attribute._backend.drop()
+        assert Attribute._backend is Event._backend
+
+    def test01_count_one(self):
+        afn = Attribute('filename', 'virus.exe')
+        e = Event('file_download', afn, orgid, 100)
+        self.assertEqual(afn.count(), 1)
+
+    def test02_count_multiple(self):
+        afn = Attribute('filename', 'virus.exe')
+        Event('file_download', afn, orgid, 100)
+        Event('file_download', afn, orgid, 200)
+        self.assertEqual(afn.count(), 2)
+
+    def test03_start(self):
+        afn = Attribute('filename', 'virus.exe')
+        Event('file_download', afn, orgid, 100)
+        Event('file_download', afn, orgid, 200)
+        
+        self.assertEqual(afn.count(start=99), 2)
+        self.assertEqual(afn.count(start=100), 2)
+        self.assertEqual(afn.count(start=101), 1)
+        self.assertEqual(afn.count(start=200), 1)
+        self.assertEqual(afn.count(start=201), 0)
+
+    def test04_end(self):
+        afn = Attribute('filename', 'virus.exe')
+        Event('file_download', afn, orgid, 100)
+        Event('file_download', afn, orgid, 200)
+        
+        self.assertEqual(afn.count(end=99), 0)
+        self.assertEqual(afn.count(end=100), 1)
+        self.assertEqual(afn.count(end=101), 1)
+        self.assertEqual(afn.count(end=200), 2)
+        self.assertEqual(afn.count(end=201), 2)
+
+    def test04_start_end(self):
+        afn = Attribute('filename', 'virus.exe')
+        Event('file_download', afn, orgid, 100)
+        Event('file_download', afn, orgid, 200)
+        Event('file_download', afn, orgid, 300)
+        
+        self.assertEqual(afn.count(start=150, end=120), 0)
+        self.assertEqual(afn.count(start=100, end=100), 1)
+        self.assertEqual(afn.count(start=100, end=101), 1)
+        self.assertEqual(afn.count(start=200, end=200), 1)
+        self.assertEqual(afn.count(start=200, end=201), 1)
+        self.assertEqual(afn.count(start=199, end=201), 1)
+
+    def test05_category(self):
+        afn = Attribute('filename', 'virus.exe')
+        e1 = Event('file_download', afn, orgid, 100)
+        e2 = Event('file_download', afn, orgid, 200)
+        e3 = Event('file_download', afn, orgid, 300)
+        e3 = Event('file_download', afn, orgid, 400)
+
+        e1.set_category('malicious')
+        e2.set_category('malicious')
+        e3.set_category('benign')
+
+        self.assertEqual(afn.count(category='malicious'), 2)
+        self.assertEqual(afn.count(category='benign'), 1)
+        self.assertEqual(afn.count(category='unknown'), 1)
+
+    def test06_context(self):
+        afn = Attribute('filename', 'virus.exe')
+        e1 = Event('file_download', afn, orgid, 100)
+        e2 = Event('file_download', afn, orgid, 200)
+        e3 = Event('file_download', afn, orgid, 300)
+        e3 = Event('file_download', afn, orgid, 400)
+
+        e1.set_context(afn, 'malicious')
+        e2.set_context(afn, 'malicious')
+        e3.set_context(afn, 'benign')
+
+        self.assertEqual(afn.count(context='malicious'), 2)
+        self.assertEqual(afn.count(context='benign'), 1)
+        self.assertEqual(afn.count(context='unknown'), 1)
+        
         
 
 class DataTest(unittest.TestCase):
@@ -110,19 +206,6 @@ class DataTest(unittest.TestCase):
         self.assertRaises(TypeError, Attribute, 'test', [1,2,3])
 
 
-class CountTest(unittest.TestCase):
-    """
-    Example
-    -------
-    a1 = Atribute('ip', '1.1.1.1')
-    e1 = Event
-    """
-    
-    @classmethod
-    def setUpClass(cls):
-        assert isinstance(Attribute._backend, (MongoBackend, MockMongoBackend))
-        Attribute._backend.drop()  
-        
 
 class DeleteTest(unittest.TestCase):
     """
