@@ -13,6 +13,8 @@ def parse(instance, backend, validate=True):
 def _create_itype_class_map():
     from .attribute import Attribute
     from .object_ import Object
+    from .event import Event
 
     ITYPE_CLASS_MAP['attribute'] = Attribute
     ITYPE_CLASS_MAP['object'] = Object
+    ITYPE_CLASS_MAP['event'] = Event

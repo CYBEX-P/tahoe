@@ -5,7 +5,7 @@ An attribute holds a single piece of information, like an IP address.
 
 __version__ = '0.1'
 __author__ = 'Farhan Sadique <qclass@protonmail.com>'
-__date__ = '20 June 2020'
+__date__ = '1 July 2020'
 
 import pdb
 
