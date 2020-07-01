@@ -5,10 +5,6 @@ NoBackend is for data sharing only. It does not deduplicate data.
 MongoBackend or MemoryBackend deduplicates data. Use them for storing.
 """
 
-__version__ = '0.1'
-__author__ = 'Farhan Sadique <qclass@protonmail.com>'
-__date__ = '10 June 2020'
-
 import os
 import pdb
 

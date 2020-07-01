@@ -5,6 +5,12 @@ else:
     from .instance import Instance
     from .misc import canonical
 
+if __name__ != 'tahoe.tdql':
+    import sys
+    sys.path = ['..'] + sys.path
+    del sys
+import tahoe
+
 import os
     
 # class ThreatQL()

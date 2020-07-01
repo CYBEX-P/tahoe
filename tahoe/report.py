@@ -1,8 +1,11 @@
 import os, collections, time
 from pymongo.collection import Collection
 
-if __name__ == "__main__": from instance import *
-else: from .instance import *
+if __name__ != 'tahoe.report':
+    import sys
+    sys.path = ['..'] + sys.path
+    del sys
+import tahoe
 
 _LIM = 10000
 

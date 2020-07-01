@@ -5,7 +5,7 @@ with open("README.md", "r") as fh:
 
 setuptools.setup(
     name="tahoe",
-    version="0.5",
+    version="0.7",
     author="Farhan Sadique",
     author_email="qclass@protonmail.com",
     description="TAHOE -- A CyberThreat Language (CTL)",
@@ -33,7 +33,7 @@ setuptools.setup(
 ##        ])
     ],
     classifiers=[
-        "Programming Language :: Python :: 3.7.x",
+        "Programming Language :: Python :: 3.8.x",
     ],
     install_requires = [
         "pymongo",

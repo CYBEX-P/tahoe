@@ -4,6 +4,7 @@
 *.ini
 Rubbish/
 input/TEMP/
+*_temp
 
 # ==================================
 # BOILERPLATE

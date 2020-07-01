@@ -16,11 +16,6 @@
 # u : str, TAHOE _hash field (SHA256 hash)
 
 
-__version__ = '0.1'
-__author__ = 'Farhan Sadique <qclass@protonmail.com>'
-__date__ = '14 June 2020'
-
-
 from collections import defaultdict
 import copy
 import json

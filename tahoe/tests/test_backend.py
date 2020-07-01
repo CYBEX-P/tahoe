@@ -1,12 +1,8 @@
-"""
-Testing tahoe\_backend.py
+"""unittests for tahoe.backend"""
 
-Needs MongoDB at localhost:27017 (without auth) to run tests.
-"""
-
-if __name__ != 'tahoe.tests.event.evnt_test':
+if __name__ != 'tahoe.tests.test_backend':
     import sys
-    sys.path += ['..', '../..']
+    sys.path = ['..', '../..'] + sys.path
     del sys
 
 import pdb
