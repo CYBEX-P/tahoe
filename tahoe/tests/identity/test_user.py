@@ -14,7 +14,7 @@ if __name__ != 'tahoe.tests.identity.test_user':
 from tahoe import Instance, Attribute
 from tahoe.identity import Identity, User
 from tahoe.identity.backend import IdentityBackend, MockIdentityBackend
-from tahoe.tests.identity.test_backend import IdentityBackendTest
+from tahoe.tests.identity.test_backend import setUpBackend, tearDownBackend
 
 
 def make_test_data():
@@ -34,22 +34,21 @@ def delete_test_data():
 
 
 def setUpModule():
-    _backend = IdentityBackendTest.setUpClass()
+    _backend = setUpBackend()
     Instance.set_backend(_backend)
 
-    assert Identity._backend is Instance._backend
+    assert User._backend is Instance._backend
+    assert isinstance(User._backend, (IdentityBackend, MockIdentityBackend))
     
 
 def tearDownModule():
-    IdentityBackendTest.tearDownClass()
+    tearDownBackend(Instance._backend)
 
 
 class InitTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        assert isinstance(User._backend, (IdentityBackend, MockIdentityBackend))
-        User._backend.drop()
-
+        Org._backend.drop()
         make_test_data()
 
     @classmethod
@@ -125,9 +124,7 @@ class InitTest(unittest.TestCase):
 class PasswordTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        assert isinstance(User._backend, (IdentityBackend, MockIdentityBackend))
-        User._backend.drop()
-
+        Org._backend.drop()
         make_test_data()
 
     @classmethod

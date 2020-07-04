@@ -62,9 +62,9 @@ class InitTest(unittest.TestCase):
         Org._backend.drop()
         make_test_data()
 
-##    @classmethod
-##    def tearDownClass(cls):
-##        delete_test_data()
+    @classmethod
+    def tearDownClass(cls):
+        delete_test_data()
         
     def test_init(self):
         self.assertIsNotNone(od)
