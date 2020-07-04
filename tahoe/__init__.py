@@ -8,9 +8,11 @@ from .instance import Instance, OES
 from .attribute import Attribute
 from .backend import Backend, NoBackend, MongoBackend
 from .event import Event
-from .object_ import Object
-from .parse import parse, _create_itype_class_map
+from .object import Object
 from .session import Session
 
-_create_itype_class_map()
 
+from .parse import parse, _create_itype_class_map
+
+
+_create_itype_class_map()

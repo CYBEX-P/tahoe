@@ -3,9 +3,9 @@ A TAHOE Raw documents stores raw user data.
 """
 
 if __name__ != 'tahoe.raw':
-    import sys
-    sys.path = ['..'] + sys.path
-    del sys
+    import sys, os
+    sys.path = ['..', os.path.join('..', '..')] + sys.path
+    del sys, os
 import tahoe
 
 
@@ -26,7 +26,7 @@ class Raw(tahoe.Instance):
     def __init__(self, sub_type, data, orgid, timezone="UTC", **kwargs):
         if isinstance(data, str):
             data = json.loads(data)
-        self.itype = 'raw
+        self.itype = 'raw'
         self.data = data
         self.orgid = orgid
         self.timezone = timezone

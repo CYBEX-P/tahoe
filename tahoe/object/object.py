@@ -28,9 +28,9 @@ The `_ref` field makes the data a graph with 3 nodes: `0xA2..,
 
 
 if __name__ != 'tahoe.object':
-    import sys
-    sys.path = ['..'] + sys.path
-    del sys
+    import sys, os
+    sys.path = ['..', os.path.join('..', '..')] + sys.path
+    del sys, os
 import tahoe
 
 
@@ -164,7 +164,7 @@ class Object(tahoe.OES):
             If data is not `Atrribute or Object`.
         """
 
-        data = self._validate_data(data, ['attribute', 'object'])
+        data = self._validate_data(data)
 
         self.itype = 'object'
         self.data = self._makedata(data)

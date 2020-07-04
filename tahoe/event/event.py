@@ -53,16 +53,16 @@ objects and their attributes must be included in the list.
 import pdb
 
 if __name__ != 'tahoe.event':
-    import sys
-    sys.path = ['..'] + sys.path
-    del sys
+    import sys, os
+    sys.path = ['..', os.path.join('..', '..')] + sys.path
+    del sys, os
 import tahoe
 
 
 # === Global Variables ===
 
 _P = {'_id': 0}
-"""Default projection for MongoDB queries"""
+"""Default projection for MongoDB queries."""
 
 
 
@@ -218,7 +218,7 @@ class Event(tahoe.OES):
         """
 
         self._validate_param(orgid=orgid, timestamp=timestamp)
-        data = self._validate_data(data, ['attribute', 'object'])
+        data = self._validate_data(data)
         
         self.itype = 'event'
         self.orgid = orgid
@@ -256,7 +256,7 @@ class Event(tahoe.OES):
 
 
     def isparent(self, data):
-        data = self._validate_data(data, ['attribute', 'object'])
+        data = self._validate_data(data)
         return all([I._hash in self._ref for I in data])
 
     def set_category(self, category):
@@ -354,19 +354,19 @@ class Event(tahoe.OES):
             return [], []
 
         if ben_data:
-            ben_data = self._validate_data(ben_data, ['attribute', 'object'])
+            ben_data = self._validate_data(ben_data)
             new_ben = {i._hash for i in ben_data}
         else:
             new_ben = set()
 
         if mal_data:
-            mal_data = self._validate_data(mal_data, ['attribute', 'object'])
+            mal_data = self._validate_data(mal_data)
             new_mal = {i._hash for i in mal_data}
         else:
             new_mal = set()
 
         if unk_data:
-            unk_data = self._validate_data(unk_data, ['attribute', 'object'])
+            unk_data = self._validate_data(unk_data)
             new_unk = {i._hash for i in unk_data}
         else:
             new_unk = set()
@@ -431,6 +431,8 @@ class Event(tahoe.OES):
         unique = self.itype + self.sub_type + self.orgid + \
             str(self.timestamp) + tahoe.misc.canonical(self.data)
         return unique.encode('utf-8')
+
+    
 
         
 

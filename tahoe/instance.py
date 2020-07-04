@@ -313,12 +313,12 @@ class OES(Instance):
         if add_data is None:
             add_data = []
         else:
-            add_data = self._validate_data(add_data, ['attribute', 'object'])
+            add_data = self._validate_instance(add_data, ['attribute', 'object'])
 
         if remove_data is None:
             remove_data = []
         else:
-            remove_data = self._validate_data(remove_data, ['attribute', 'object'])
+            remove_data = self._validate_instance(remove_data, ['attribute', 'object'])
 
         if not (add_data + remove_data):
             raise ValueError("add_data or remove_data required")
@@ -386,21 +386,24 @@ class OES(Instance):
             _ref.append(i._hash)
             if hasattr(i, '_ref'):  # type(i) == Object
                 _ref += i._ref
-        return list(set(_cref)), list(set(_ref))                  
+        return list(set(_cref)), list(set(_ref))
 
-    def _validate_data(self, data, type_list):
+    def _validate_data(self, data):
+        return self._validate_instance(data, ['attribute', 'object'])
+
+    def _validate_instance(self, instance, type_list):
         type_list = [ITYPE_CLASS_MAP.get(t) for t in type_list]
         
-        if not isinstance(data, list):
-            data = [data]
-        data = list(set(data))
-        if len(data)==0:
+        if not isinstance(instance, list):
+            instance = [instance]
+        instance = list(set(instance))
+        if len(instance)==0:
             raise ValueError("data cannot be empty")
-        for i in data:
+        for i in instance:
             if not any([isinstance(i, t) for t in type_list]):
                 raise TypeError("instances must be of type tahoe "
                                 + " or ".join([str(t) for t in type_list]))
-        return data
+        return instance
 
 
 

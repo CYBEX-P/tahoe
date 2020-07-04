@@ -1,38 +1,14 @@
 """
-User: similar to UserModel in flask code; see https://github.com/CYBEX-P/cybexp-cs/blob/5707b87e9166470ce48d884e11d8d677ec1cfeee/api/models.py#L4
-Additional classes: Org, Config
-IdentityBackend: to query database easily
-User: create, modify user, get JWT token etc.
-Org: create org, add user, get JWT token etc.
-
-Future work:
-- expire JWT
---- justify expire JWT (why should tokens expire?)
---- code renew token like flask-jwt
---- provide automatic renewal mechanism for machines
-- revoke JWT using blacklist (not required if expire quick)
-- Org.addadmin(user)
-- Org.deladmin(user)
-- CybexAdminUser
-- decorators: @user_required, @org_required (no argument)
---- use werkzeug.local.LocalProxy to get token from falcon
-- separate JWT class
---- User, Org inherit JWT class as 2nd parent
---- JWT class is initialized in falcon/flask/django like jwt = JWT(secret, algo)
---- so manual setting of Identity.secret, Identity.algo is not required in falcon
+IdentityBackend, User, Org and InputConfig class.
 """
 
+import pdb
 
-# ==== Import ====
-
-if __name__ in ["__main__", "identity"]:
-  from instance import Attribute, Object, Instance
-  from backend import NoBackend, MongoBackend, set_mongo_backend
-else:
-  from .instance import Attribute, Object, Instance
-  from .backend import NoBackend, MongoBackend, set_mongo_backend
-
-import hashlib, uuid, jwt, pdb
+if __name__ != 'tahoe.identity':
+    import sys, os
+    sys.path = ['..', os.path.join('..', '..')] + sys.path
+    del sys, os
+import tahoe
 
 
 

@@ -6,9 +6,9 @@ e.g. events recorded when a user visits a website.
 import uuid
 
 if __name__ != 'tahoe.session':
-    import sys
-    sys.path = ['..'] + sys.path
-    del sys
+    import sys, os
+    sys.path = ['..', os.path.join('..', '..')] + sys.path
+    del sys, os
 import tahoe
 
 
@@ -144,7 +144,7 @@ class Session(tahoe.OES):
         if data is None:
             data = tahoe.Attribute('sessionid', str(uuid.uuid4()))
             
-        data = self._validate_data(data, ['attribute', 'object'])
+        data = self._validate_data(data)
 
         self.itype = 'session'
         self.data = self._makedata(data)
@@ -154,7 +154,7 @@ class Session(tahoe.OES):
 
 
     def add_event(self, data):
-        data = self._validate_data(data, ['event'])
+        data = self._validate_instance(data, ['event'])
         new_ref = {e._hash for e in data}
         _ref = set(self._ref)
         _ref = _ref.union(new_ref)
@@ -162,7 +162,7 @@ class Session(tahoe.OES):
         self._update({"_ref": _ref})
 
     def remove_event(self, data):
-        data = self._validate_data(data, ['event'])
+        data = self._validate_instance(data, ['event'])
         new_ref = {e._hash for e in data}
         _ref = set(self._ref)
         _ref = _ref - new_ref

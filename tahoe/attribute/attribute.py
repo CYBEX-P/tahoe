@@ -5,9 +5,9 @@ An attribute holds a single piece of information, like an IP address.
 import pdb
 
 if __name__ != 'tahoe.attribute':
-    import sys
-    sys.path = ['..'] + sys.path
-    del sys
+    import sys, os
+    sys.path = ['..', os.path.join('..', '..')] + sys.path
+    del sys, os
 import tahoe
 
 
