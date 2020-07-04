@@ -48,7 +48,7 @@ def tearDownModule():
 class InitTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        Org._backend.drop()
+        User._backend.drop()
         make_test_data()
 
     @classmethod
@@ -124,7 +124,7 @@ class InitTest(unittest.TestCase):
 class PasswordTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        Org._backend.drop()
+        User._backend.drop()
         make_test_data()
 
     @classmethod
