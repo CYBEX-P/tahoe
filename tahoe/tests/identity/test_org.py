@@ -1,11 +1,11 @@
-"""unittests for tahoe.identity.user"""
+"""unittests for tahoe.identity.org"""
 
 import builtins
 import hashlib
 import pdb
 import unittest
 
-if __name__ != 'tahoe.tests.identity.test_user':
+if __name__ != 'tahoe.tests.identity.test_org':
     import sys, os
     sys.path = ['..', os.path.join('..', '..'),
                 os.path.join('..', '..', '..')] + sys.path
@@ -27,7 +27,7 @@ def make_test_data():
 
     builtins.aon = Attribute('orgname', 'unr')
     builtins.an = Attribute('name', 'University of Nevada Reno')
-    builtins.oadm = Object('cybexp_org_admin', u1)
+    builtins.oadm = Object('admin', u1)
 
     builtins.ae = Attribute('email_addr', 'user1@example.com')
 
@@ -104,17 +104,17 @@ class InitTest(unittest.TestCase):
         EQ = self.assertEqual
         expected_pass = '3f21a8490cef2bfb60a9702e9d2ddb' \
                         '7a805c9bd1a263557dfd51a7d0e9dfa93e'
-        EQ(o.data['cybexp_org_admin'][0]['cybexp_user'][0]['email_addr'][0],
+        EQ(o.data['admin'][0]['cybexp_user'][0]['email_addr'][0],
            'user1@example.com')
-        EQ(o.data['cybexp_org_admin'][0]['cybexp_user'][0]['name'][0],
+        EQ(o.data['admin'][0]['cybexp_user'][0]['name'][0],
            'User 1')
-        EQ(o.data['cybexp_org_admin'][0]['cybexp_user'][0]['password'][0],
+        EQ(o.data['admin'][0]['cybexp_user'][0]['password'][0],
            expected_pass)
-        EQ(od['data']['cybexp_org_admin'][0]['cybexp_user'][0]['email_addr'][0],
+        EQ(od['data']['admin'][0]['cybexp_user'][0]['email_addr'][0],
            'user1@example.com')
-        EQ(od['data']['cybexp_org_admin'][0]['cybexp_user'][0]['name'][0],
+        EQ(od['data']['admin'][0]['cybexp_user'][0]['name'][0],
            'User 1')
-        EQ(od['data']['cybexp_org_admin'][0]['cybexp_user'][0]['password'][0],
+        EQ(od['data']['admin'][0]['cybexp_user'][0]['password'][0],
            expected_pass)
         
     def test_cref(self):

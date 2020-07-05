@@ -1,6 +1,6 @@
 """Org Class."""
 
-if __name__ != 'tahoe.identity.user':
+if __name__ != 'tahoe.identity.org':
     import sys, os
     sys.path = ['..', os.path.join('..', '..')] + sys.path
     del sys, os
@@ -26,7 +26,7 @@ class Org(Identity):
         orgname = Attribute('orgname', orgname, _backend=self._backend)
         name = Attribute('name', name, _backend=self._backend)
 
-        admin = Object('cybexp_org_admin', admin, _backend=self._backend)
+        admin = Object('admin', admin, _backend=self._backend)
 
         super().__init__('cybexp_org', [orgname, name, *user, admin], **kwargs)
 
