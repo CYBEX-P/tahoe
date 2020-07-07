@@ -9,7 +9,9 @@ from .attribute import Attribute
 from .backend import Backend, NoBackend, MongoBackend
 from .event import Event
 from .object import Object
+from .raw import Raw
 from .session import Session
+from .tdql import TDQL
 
 
 from .parse import parse, _create_itype_class_map

@@ -2,6 +2,9 @@
 A TAHOE Raw documents stores raw user data.
 """
 
+
+import json
+
 if __name__ != 'tahoe.raw':
     import sys, os
     sys.path = ['..', os.path.join('..', '..')] + sys.path
@@ -18,9 +21,7 @@ _P = {'_id': 0}
 
 class Raw(tahoe.Instance):
     """
-    A Raw document holds raw user data.
-
- 
+    A TAHOE Raw instance stores raw user data.
     """
     
     def __init__(self, sub_type, data, orgid, timezone="UTC", **kwargs):
@@ -37,3 +38,6 @@ class Raw(tahoe.Instance):
             _ref = self._ref + _ref
         _ref = list(set(_ref))
         self._update({'_ref': _ref})
+
+
+

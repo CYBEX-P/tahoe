@@ -14,11 +14,17 @@ def _create_itype_class_map():
     from .attribute import Attribute
     from .object import Object
     from .event import Event
+    from .raw import Raw
     from .session import Session
-    from .identity import User
+    from .tdql import TDQL
+    from .identity import Org, User
+    
 
     ITYPE_CLASS_MAP['attribute'] = Attribute
-    ITYPE_CLASS_MAP['object'] = Object
     ITYPE_CLASS_MAP['event'] = Event
+    ITYPE_CLASS_MAP['object'] = Object
+    ITYPE_CLASS_MAP['org'] = Org
+    ITYPE_CLASS_MAP['raw'] = Raw
     ITYPE_CLASS_MAP['session'] = Session
+    ITYPE_CLASS_MAP['tdql'] = TDQL
     ITYPE_CLASS_MAP['user'] = User

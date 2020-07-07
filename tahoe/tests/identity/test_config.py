@@ -32,20 +32,20 @@ def make_test_data():
     builtins.ao = Attribute('orgid', orgid)
     builtins.at = Attribute('timezone', timezone)
     builtins.au = Attribute('url', url)
+    builtins.ae = Attribute('enabled', True)
     
     builtins.ic = InputConfig(plugin, name, typetag, orgid, timezone, au)
     builtins.icd = ic._backend.find_one({'_hash': ic._hash})
     
     builtins.wsc = WebSocketConfig(name, typetag, orgid, timezone, url)
-    builtins.wscd = wsc._backend.find_one({'_hash': wsc._hash})
-    
+    builtins.wscd = wsc._backend.find_one({'_hash': wsc._hash})    
     
 
 def delete_test_data():
     del builtins.plugin, builtins.name, builtins.typetag, builtins.orgid, \
         builtins.timezone, builtins.url, builtins.ap, builtins.an, \
-        builtins.att, builtins.ao, builtins.at, builtins.au, builtins.ic, \
-        builtins.icd, builtins.wsc, builtins.wscd
+        builtins.att, builtins.ao, builtins.at, builtins.au, builtins.ae, \
+        builtins.ic, builtins.icd, builtins.wsc, builtins.wscd
 
 
 def setUpModule():
@@ -113,8 +113,8 @@ class InputConfigInitTest(unittest.TestCase):
         EQ = self.assertEqual
         IN = self.assertIn
 
-        EQ(len(ic._cref), 6)
-        EQ(len(icd['_cref']), 6)
+        EQ(len(ic._cref), 7)
+        EQ(len(icd['_cref']), 7)
         
         IN(ap._hash, ic._cref)
         IN(an._hash, ic._cref)
@@ -122,19 +122,21 @@ class InputConfigInitTest(unittest.TestCase):
         IN(ao._hash, ic._cref)
         IN(at._hash, ic._cref)
         IN(au._hash, ic._cref)
+        IN(ae._hash, ic._cref)
         IN(ap._hash, icd['_cref'])
         IN(an._hash, icd['_cref'])
         IN(att._hash, icd['_cref'])
         IN(ao._hash, icd['_cref'])
         IN(at._hash, icd['_cref'])
         IN(au._hash, icd['_cref'])
+        IN(ae._hash, icd['_cref'])
 
     def test_ref(self):
         EQ = self.assertEqual
         IN = self.assertIn
 
-        EQ(len(ic._ref), 6)
-        EQ(len(icd['_ref']), 6)
+        EQ(len(ic._ref), 7)
+        EQ(len(icd['_ref']), 7)
         
         IN(ap._hash, ic._ref)
         IN(an._hash, ic._ref)
@@ -142,17 +144,19 @@ class InputConfigInitTest(unittest.TestCase):
         IN(ao._hash, ic._ref)
         IN(at._hash, ic._ref)
         IN(au._hash, ic._ref)
+        IN(ae._hash, ic._ref)
         IN(ap._hash, icd['_ref'])
         IN(an._hash, icd['_ref'])
         IN(att._hash, icd['_ref'])
         IN(ao._hash, icd['_ref'])
         IN(at._hash, icd['_ref'])
         IN(au._hash, icd['_ref'])
+        IN(ae._hash, icd['_ref'])
 
 
     def test_hash(self):
-        expected_hash = 'd5164271d97d5ccab3c8eca790fed270840144692a' \
-                        '81e0b942a402b81bb3d78e'
+        expected_hash = '7644c763afc91a8ad2a45756838236dd69b49b11' \
+                        'ad6d0b5bac3f8fcf341bfe5e'
         EQ = self.assertEqual
         EQ(ic._hash, expected_hash)
         EQ(icd['_hash'], expected_hash)
@@ -210,8 +214,8 @@ class WebSocketConfigTest(unittest.TestCase):
         EQ = self.assertEqual
         IN = self.assertIn
 
-        EQ(len(wsc._cref), 6)
-        EQ(len(wscd['_cref']), 6)
+        EQ(len(wsc._cref), 7)
+        EQ(len(wscd['_cref']), 7)
         
         IN(ap._hash, wsc._cref)
         IN(an._hash, wsc._cref)
@@ -219,19 +223,21 @@ class WebSocketConfigTest(unittest.TestCase):
         IN(ao._hash, wsc._cref)
         IN(at._hash, wsc._cref)
         IN(au._hash, wsc._cref)
+        IN(ae._hash, wsc._cref)
         IN(ap._hash, wscd['_cref'])
         IN(an._hash, wscd['_cref'])
         IN(att._hash, wscd['_cref'])
         IN(ao._hash, wscd['_cref'])
         IN(at._hash, wscd['_cref'])
         IN(au._hash, wscd['_cref'])
+        IN(ae._hash, wscd['_cref'])
 
     def test_ref(self):
         EQ = self.assertEqual
         IN = self.assertIn
 
-        EQ(len(wsc._ref), 6)
-        EQ(len(wscd['_ref']), 6)
+        EQ(len(wsc._ref), 7)
+        EQ(len(wscd['_ref']), 7)
         
         IN(ap._hash, wsc._ref)
         IN(an._hash, wsc._ref)
@@ -239,17 +245,19 @@ class WebSocketConfigTest(unittest.TestCase):
         IN(ao._hash, wsc._ref)
         IN(at._hash, wsc._ref)
         IN(au._hash, wsc._ref)
+        IN(ae._hash, wsc._ref)
         IN(ap._hash, wscd['_ref'])
         IN(an._hash, wscd['_ref'])
         IN(att._hash, wscd['_ref'])
         IN(ao._hash, wscd['_ref'])
         IN(at._hash, wscd['_ref'])
         IN(au._hash, wscd['_ref'])
+        IN(ae._hash, wscd['_ref'])
 
 
     def test_hash(self):
-        expected_hash = 'd5164271d97d5ccab3c8eca790fed270840144692a' \
-                        '81e0b942a402b81bb3d78e'
+        expected_hash = '7644c763afc91a8ad2a45756838236dd69b49b11' \
+                        'ad6d0b5bac3f8fcf341bfe5e'
         EQ = self.assertEqual
         EQ(wsc._hash, expected_hash)
         EQ(wscd['_hash'], expected_hash)

@@ -10,7 +10,7 @@ from tahoe import Attribute, Object
 
 class InputConfig(Object):  
     def __init__(self, plugin, name, typetag, orgid, timezone,
-                 data=None, **kwargs):
+                 data=None, enabled=True, **kwargs):
         plugin = Attribute('plugin', plugin, _backend=self._backend)
         """plugin_name"""
         name = Attribute('name', name, _backend=self._backend)
@@ -20,18 +20,30 @@ class InputConfig(Object):
         orgid = Attribute('orgid', orgid, _backend=self._backend)
         timezone = Attribute('timezone', timezone, _backend=self._backend)
 
+        assert enabled in [True, False]
+        enabled = Attribute('enabled', enabled, _backend=self._backend)
+
         if not data:
             data=[]
         elif not isinstance(data, list):
             data = [data]
-        data = data + [plugin, name, typetag, orgid, timezone]
+        data = data + [plugin, name, typetag, orgid, timezone, enabled]
 
         super().__init__('cybexp_input_config', data, **kwargs)
 
+    def disable(self):
+        pass
+
+    def enable(self):
+        pass
+
 
 class WebSocketConfig(InputConfig):
-    def __init__(self, name, typetag, orgid, timezone, url, **kwargs):
-        data = Attribute('url', url)  # future work: check for valid url
+    def __init__(self, name, typetag, orgid, timezone, url,
+                 enabled=True, **kwargs):
+        data = Attribute('url', url, _backend=self._backend)
         super().__init__('websocket', name, typetag, orgid, timezone,
-                         data, **kwargs)
+                         data, enabled, **kwargs)
+
+        #check for ws:// (the protocol) in the url
 

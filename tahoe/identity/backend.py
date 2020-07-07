@@ -19,6 +19,30 @@ class IdentityBackend(tahoe.MongoBackend):
     special methods to manage them.
     """
 
+    def get_config(self, plugin_lst=None, enabled=True):
+        ae = tahoe.Attribute('enabled', enabled)
+        
+        q = {'sub_type': 'cybexp_input_config', '_cref': {'$eq': ae._hash}}
+        
+        _hash_lst = []
+        if plugin_lst:
+            for p in plugin_lst:
+              ap = tahoe.Attribute('plugin', p)
+              _hash_lst.append(ap._hash)
+            
+            q['_cref']['$in']: _hash_lst
+        
+        r = self.find(q, {'_id': 0})
+        return list(r)
+
+    def get_all_plugin(self, enabled=True):
+        ae = tahoe.Attribute('enabled', enabled)
+        q = {'sub_type': 'cybexp_input_config', '_cref': ae._hash}
+        p = {'_id': 0, 'data.plugin': 1}
+        r = self.find(q, p)
+        all_plugin = [c['data']['plugin'][0] for c in r]
+        return all_plugin
+
     def find_user(self, email, p=P):
         """
         Find user by email address; email is unique id of user in TAHOE.
