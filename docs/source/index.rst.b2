@@ -1,0 +1,30 @@
+Welcome to Tahoe's documentation!
+=================================
+.. toctree::
+    :maxdepth: 2
+    :caption: Contents:
+
+   Tahoe Modules <modules>
+
+
+.. _toctree::
+    :maxdepth: 1 
+
+   index
+
+.. include:: usage.rst
+
+
+Tahoe Instances
+-----------------
+.. .automodule:: tahoe.instance 
+    :members:
+
+
+
+Indices and tables
+==================
+
+* :ref:`genindex`
+* :ref:`modindex`
+* :ref:`search`

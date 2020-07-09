@@ -109,3 +109,9 @@ ENV/
 
 # mypy
 .mypy_cache/
+
+
+# sphinx doc
+!docs/make.bat
+docs/build/*
+docs/source/tahoe.*.rst
