@@ -31,12 +31,21 @@ class InputConfig(Object):
 
         super().__init__('cybexp_input_config', data, **kwargs)
 
+    @property
+    def status(self):
+        return self.data['enabled'][0] 
+    
     def disable(self):
-        pass
+        if self.status == True:
+            ae = Attribute("enabled", True, _backend=self._backend)
+            ad = Attribute("enabled", False, _backend=self._backend)
+            self.edit(add_data=ad, remove_data=ae)
 
     def enable(self):
-        pass
-
+        if self.status == False:
+            ae = Attribute("enabled", True, _backend=self._backend)
+            ad = Attribute("enabled", False, _backend=self._backend)
+            self.edit(add_data=ae, remove_data=ad)
 
 class WebSocketConfig(InputConfig):
     def __init__(self, name, typetag, orgid, timezone, url,

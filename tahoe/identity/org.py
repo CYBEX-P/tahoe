@@ -40,9 +40,11 @@ class Org(Identity):
         pass
     
     def deladmin(self, user):
+        # if user is admin
         pass
 
     def deluser(self, user):
+        # is admiin?
         pass
 
     @property
@@ -50,3 +52,9 @@ class Org(Identity):
         unique = self.itype + self.sub_type + self.data['orgname'][0]
         return unique.encode('utf-8')
 
+    def isAdmin(self, user_id):
+        return False
+        # TODO
+
+    # def isMember(self, user_id):
+        
