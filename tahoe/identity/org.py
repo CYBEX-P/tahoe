@@ -33,9 +33,20 @@ class Org(Identity):
         super().__init__('cybexp_org', [orgname, name, *user, admin], **kwargs)
 
 
+    @property
+    def acl(self):
+        return self._acl
+    @acl.setter
     def set_acl(self, acl):
-        if isinstance(acl, list) and all([isinstance(s,str) for s in acl]):
-            self._acl = acl
+        if isinstance(acl, list) and all([isinstance(s,str) or self._validate_instance(user, ['org']) for s in acl]):
+            new_acl = self._adm_ref
+            for u in acl:
+                if isinstance(u, str):
+                    new_acl.append(u)
+                else:
+                    new_acl.append(u._hash)
+            self._acl = new_acl
+            self._update()
         else:
             raise TypeError
 
