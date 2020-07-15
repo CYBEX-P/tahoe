@@ -23,7 +23,7 @@ class Org(Identity):
         self._usr_ref = [u._hash for u in user]
         self._adm_ref = [u._hash for u in admin]
 
-        self._acl = []
+        self._acl = self._adm_ref + self._usr_ref
           
         orgname = Attribute('orgname', orgname, _backend=self._backend)
         name = Attribute('name', name, _backend=self._backend)

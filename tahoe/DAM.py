@@ -5,7 +5,8 @@ if __name__ != 'tahoe.identity.backend':
     import sys, os
     sys.path = ['..'] + sys.path  #  os.path.join('..', '..')
     del sys, os
-from tahoe import MongoBackend, IdentityBackend
+from tahoe import MongoBackend, NoBackend
+from tahoe.identity import IdentityBackend, User
 
 
 
@@ -30,7 +31,7 @@ class DAM(MongoBackend):
    ---------
    MongoBackend: Mongo Backend
    """
-   def__init(self, ident_backend, *args, **kwargs):
+   def __init__(self, ident_backend, *args, **kwargs):
       """
       Parameters
       ----------
@@ -55,8 +56,10 @@ class DAM(MongoBackend):
          TypeError
             If `user` is not of type `tahoe.User`
       """
-      self._validate_instance(user, ['user']) # will raise TypeError if not User
-      return user._hash
+      u = User("fake@example.com", _backend=NoBackend())
+      u._validate_instance(user, ['user']) # will raise TypeError if not User
+      h = user._hash
+      return h
 
    def _get_groups_for_user(self, user):
       """Returns the hashes of groups that the `user` belongs to.
@@ -117,7 +120,7 @@ class DAM(MongoBackend):
                                       "_acl": user_hash})
       direct_access = list()
       for org in direct_acl_orgs:
-         direct_access.append(org["orgid"]) # TODO check that orgid is what we need for acl
+         direct_access.append(org["_hash"]) 
 
       # # check indirect access to org's data, user belongs to a groupd that has access to org data
       # users_groups = self._get_groups_for_user(user_hash)
@@ -126,7 +129,7 @@ class DAM(MongoBackend):
       #                                 "_acl": users_groups})
       # indirect_access = list()
       # for org in indirect_acl_orgs:
-      #    indirect_access.append(org["orgid"]) # TODO check that orgid is what we need for acl
+      #    indirect_access.append(org["_hash"]) 
       
       # TODO generate list of orgs that this user has access to only based on their rules
       #rule_access = list() # list of orgs
@@ -152,24 +155,27 @@ class DAM(MongoBackend):
             TypeError
                If `user` is not tahoe.User._hash or of type tahoe.User
          """
-         
+         args = list(args) # conver tuple to list, make editable
+
          if isinstance(user, str):
             user_hash = user
          else:
             user_hash = self._user_to_hash(user)
     
+
          query = args[0]
 
-         if 'orgid' in query:
+         if 'orgid' in query: # orgid
+            print(query)
             raise ImpossibleError
     
          allowed_orgs = self._get_acl_for_user(user_hash)
-
          acl_query = {"orgid": {"$in": allowed_orgs}} # TODO orgs._hash
     
-         new_query = query.update(acl_query) # {**query, **acl_query}
 
-         args[0] = new_query
+         args[0] = {**query, **acl_query}
+
+         print(args)
     
          result = func(self, *args, **kwargs)
          return result
@@ -180,7 +186,7 @@ class DAM(MongoBackend):
    def find(self, *args, **kwargs):
       """Calls parent's (MongoBackend) find() function, enforcing access control restrictions defined based on acl in orgs.
       """
-      return super().find(self, *args,**kwargs)
+      return super().find(*args,**kwargs)
 
    @DAM_find_decorator
    def find_one(self, *args, **kwargs):
@@ -203,4 +209,3 @@ class DAM(MongoBackend):
    #    pass
 
    # 
-   
