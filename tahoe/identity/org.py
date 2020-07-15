@@ -22,6 +22,8 @@ class Org(Identity):
 
         self._usr_ref = [u._hash for u in user]
         self._adm_ref = [u._hash for u in admin]
+
+        self._acl = []
           
         orgname = Attribute('orgname', orgname, _backend=self._backend)
         name = Attribute('name', name, _backend=self._backend)
@@ -29,6 +31,13 @@ class Org(Identity):
         admin = Object('admin', admin, _backend=self._backend)
 
         super().__init__('cybexp_org', [orgname, name, *user, admin], **kwargs)
+
+
+    def set_acl(self, acl):
+        if isinstance(acl, list) and all([isinstance(s,str) for s in acl]):
+            self._acl = acl
+        else:
+            raise TypeError
 
     def addadmin(self, user):
         pass
@@ -57,4 +66,4 @@ class Org(Identity):
         # TODO
 
     # def isMember(self, user_id):
-        
+

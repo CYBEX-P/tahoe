@@ -48,9 +48,33 @@ class DAM(MongoBackend):
       super().__init__(*args, **kwargs)
 
 
+   def _user_to_hash(self, user):
+      """returns a `tahoe.User`'s  identifier, `_hash`
+      Raises
+      ------
+         TypeError
+            If `user` is not of type `tahoe.User`
+      """
+      self._validate_instance(user, ['user']) # will raise TypeError if not User
+      return user._hash
 
+   def _get_groups_for_user(self, user):
+      """Returns the hashes of groups that the `user` belongs to.
+      Parameters
+      ----------
+      user: str, User
+         the user
 
-   def _get_groups_for_user(self, user_id):
+      Raises
+      ------
+         TypeError
+            If `user` is not tahoe.User._hash or of type tahoe.User
+      """
+
+      if isinstance(user, str):
+         user_hash = user
+      else:
+         user_hash = self._user_to_hash(user)
       print("TODO: DAM._get_groups_for_user(): implement")
       return list() # empty untill the below code is enabled
 
@@ -58,33 +82,45 @@ class DAM(MongoBackend):
       # groups_records = self._ident_backend.find({"itype": "object", 
       #                                 "sub_type": "cybexp_group",
       #                                 # may have to change below _acl fields name once group is implemented  
-      #                                 "_acl": user_id}) 
+      #                                 "_acl": user_hash}) 
       # belonging_gid = list()
       # for group in groups_records:
       #    belonging_gid.append(group["gid"]) # TODO question: group hash doesnt seem to be good idea since if group changes then so does hash, then we need to update acl fields
 
       # return belonging_gid
 
-   def _get_acl_for_user(self, user_id):
-      """Returns the organizations IDs that the user(of `user_id`) has acces to. That is, the user is either in the organization's ACL,
+   def _get_acl_for_user(self, user):
+      """Returns the organizations IDs that the user has acces to. That is, the user is either in the organization's ACL,
             the user belongs to a group that is in the organizations ACL, or the user has matched a rule or wildcard rule in the organizations ACL.
+      Parameters
+      ----------
+      user: str, User
+         The `User` or hash of a user that will be used for acl lookup
       Returns
       -------
       expanded_acl: list
-         List of organization IDs that the user with `user_id` has access to.
-      """
+         List of organization IDs that the user `user` has access to.
 
+      Raises
+      ------
+         TypeError
+            If `user` is not tahoe.User._hash or of type tahoe.User
+      """
+      if isinstance(user, str):
+         user_hash = user
+      else:
+         user_hash = self._user_to_hash(user) # will raise on bad data
 
       # check direct access to org's data, user directly in orgs acl
       direct_acl_orgs = self._ident_backend.find({"itype": "object", 
                                       "sub_type": "cybexp_org", 
-                                      "_acl": user_id})
+                                      "_acl": user_hash})
       direct_access = list()
       for org in direct_acl_orgs:
          direct_access.append(org["orgid"]) # TODO check that orgid is what we need for acl
 
       # # check indirect access to org's data, user belongs to a groupd that has access to org data
-      # users_groups = self._get_groups_for_user(user_id)
+      # users_groups = self._get_groups_for_user(user_hash)
       # indirect_acl_orgs = self._ident_backend.find({"itype": "object", 
       #                                 "sub_type": "cybexp_org", 
       #                                 "_acl": users_groups})
@@ -104,15 +140,23 @@ class DAM(MongoBackend):
       Decorator that enforces ACL when doing query/find operations.
 
       """
-      def wrapper(self, user_id, *args, **kwargs):
-         """ Will use `user_id` to find which organization the use has read access to, then it will modify `args[0]`(the query) and apply the acl restrictions.
+      def wrapper(self, user, *args, **kwargs):
+         """ Will use `user` to find which organization the use has read access to, then it will modify `args[0]`(the query) and apply the acl restrictions.
                It will do so by editing the query before calling the decorated function `func`. This decorator is for find/query operations only, not insert operations.
          Parameter
          ---------
-         user_id: str
-            hash of the user that is quering the data
+         user: str, User
+            hash or `User` of the user that is quering the data
+         Raises
+         ------
+            TypeError
+               If `user` is not tahoe.User._hash or of type tahoe.User
          """
          
+         if isinstance(user, str):
+            user_hash = user
+         else:
+            user_hash = self._user_to_hash(user)
     
          query = args[0]
 
@@ -159,3 +203,4 @@ class DAM(MongoBackend):
    #    pass
 
    # 
+   

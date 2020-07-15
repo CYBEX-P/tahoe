@@ -21,7 +21,7 @@ class IdentityBackend(tahoe.MongoBackend):
 
     def __init__(self, mongo_url=None, dbname="identity_db",
                  collname="identity_coll", create=False, **kwargs):
-        supper.__init__(mongo_url, dbname, collname, create, **kwargs)
+        super().__init__(mongo_url, dbname, collname, create, **kwargs)
         
     def get_config(self, plugin_lst=None, enabled=True):
         ae = tahoe.Attribute('enabled', enabled)
@@ -89,4 +89,6 @@ class MockIdentityBackend(tahoe.backend.MockMongoBackend):
 
     def user_exists(self, email):
         return self.find_user(email, {**P, "_hash":1}) is not None
+
+
 
