@@ -40,8 +40,8 @@ class DAM(MongoBackend):
       
       See Also
       --------
-         User: User
-         Org: Organization
+      User: User
+      Org: Organization
 
       """
 
@@ -53,8 +53,8 @@ class DAM(MongoBackend):
       """returns a `tahoe.User`'s  identifier, `_hash`
       Raises
       ------
-         TypeError
-            If `user` is not of type `tahoe.User`
+      TypeError
+         If `user` is not of type `tahoe.User`
       """
       u = User("fake@example.com", _backend=NoBackend())
       u._validate_instance(user, ['user']) # will raise TypeError if not User
@@ -65,13 +65,13 @@ class DAM(MongoBackend):
       """Returns the hashes of groups that the `user` belongs to.
       Parameters
       ----------
-      user: str, User
+      user: str or User
          the user
 
       Raises
       ------
-         TypeError
-            If `user` is not tahoe.User._hash or of type tahoe.User
+      TypeError
+         If `user` is not tahoe.User._hash or of type tahoe.User
       """
 
       if isinstance(user, str):
@@ -97,7 +97,7 @@ class DAM(MongoBackend):
             the user belongs to a group that is in the organizations ACL, or the user has matched a rule or wildcard rule in the organizations ACL.
       Parameters
       ----------
-      user: str, User
+      user: str or User
          The `User` or hash of a user that will be used for acl lookup
       Returns
       -------
@@ -106,8 +106,8 @@ class DAM(MongoBackend):
 
       Raises
       ------
-         TypeError
-            If `user` is not tahoe.User._hash or of type tahoe.User
+      TypeError
+         If `user` is not tahoe.User._hash or of type tahoe.User
       """
       if isinstance(user, str):
          user_hash = user
@@ -148,12 +148,12 @@ class DAM(MongoBackend):
                It will do so by editing the query before calling the decorated function `func`. This decorator is for find/query operations only, not insert operations.
          Parameter
          ---------
-         user: str, User
+         user: str or User
             hash or `User` of the user that is quering the data
          Raises
          ------
-            TypeError
-               If `user` is not tahoe.User._hash or of type tahoe.User
+         TypeError
+            If `user` is not tahoe.User._hash or of type tahoe.User
          """
          args = list(args) # conver tuple to list, make editable
 
