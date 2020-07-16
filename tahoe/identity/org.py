@@ -37,18 +37,46 @@ class Org(Identity):
     def acl(self):
         return self._acl
     @acl.setter
-    def set_acl(self, acl):
-        if isinstance(acl, list) and all([isinstance(s,str) or self._validate_instance(user, ['org']) for s in acl]):
-            new_acl = self._adm_ref
-            for u in acl:
-                if isinstance(u, str):
-                    new_acl.append(u)
-                else:
-                    new_acl.append(u._hash)
-            self._acl = new_acl
-            self._update()
+    def set_acl(self,admin, acl):
+        """
+        Parameters
+        ----------
+        admin: str or User
+            `User` or hash of user that will change the acl, must be admin
+        acl: list
+            list of hashes and `Users` , used as new acl
+        Returns
+        -------
+        bool
+            True if ACL update was successful
+        Raises
+        ------
+        TypeError
+            if `admin` is not of type `User` or string
+        """
+
+        if isinstance(admin,str):
+            admin_hash = admin
+        elif self._validate_instance(admin, ["user"]):
+            admin_hash = admin._hash
         else:
             raise TypeError
+
+
+        if admin_hash in self._adm_ref:
+            if isinstance(acl, list) and all([isinstance(s,str) or self._validate_instance(s, ['user']) for s in acl]):
+                new_acl = self._adm_ref
+                for u in acl:
+                    if isinstance(u, str):
+                        new_acl.append(u)
+                    else:
+                        new_acl.append(u._hash)
+                self._acl = list(set(new_acl))
+                self._update()
+                return True
+            else:
+                raise TypeError
+        return False
 
     def addadmin(self, user):
         pass
