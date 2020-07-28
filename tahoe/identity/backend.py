@@ -59,8 +59,8 @@ class IdentityBackend(tahoe.MongoBackend):
             MongoDB projection
         """
 
-        thisuser = tahoe.identity.User(email, backend=tahoe.NoBackend())
-        return self.backend.find_one({"_hash": thisuser._hash}, p)
+        thisuser = tahoe.identity.User(email, _backend=tahoe.NoBackend())
+        return self.find_one({"_hash": thisuser._hash}, p) 
 
     def user_exists(self, email):
         return self.find_user(email, {**P, "_hash":1}) is not None
