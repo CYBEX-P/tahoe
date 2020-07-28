@@ -163,14 +163,14 @@ class DAM(MongoBackend):
             user_hash = self._user_to_hash(user)
     
 
-         query = args[0]
+         query = args[0] # make it editable
 
          if 'orgid' in query: # orgid
             print(query)
             raise ImpossibleError
     
          allowed_orgs = self._get_acl_for_user(user_hash)
-         acl_query = {"orgid": {"$in": allowed_orgs}} # TODO orgs._hash
+         acl_query = {"orgid": {"$in": allowed_orgs}} 
     
 
          args[0] = {**query, **acl_query}

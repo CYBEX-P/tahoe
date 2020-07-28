@@ -11,6 +11,8 @@ from tahoe import Attribute, Object
 class InputConfig(Object):  
     def __init__(self, plugin, name, typetag, orgid, timezone,
                  data=None, enabled=True, **kwargs):
+        if "_backend" in kwargs:
+            self._backend = kwargs.pop("_backend")
         plugin = Attribute('plugin', plugin, _backend=self._backend)
         """plugin_name"""
         name = Attribute('name', name, _backend=self._backend)

@@ -6,7 +6,12 @@ def parse(instance, backend, validate=True):
     instance.pop("_id", None)
     t = ITYPE_CLASS_MAP.get('attribute')('mock', 'mock')
     t.__dict__ = instance
-    t.__class__ = ITYPE_CLASS_MAP.get(instance['itype'])
+    if instance['itype'] == 'object' and instance['sub_type'] == "cybexp_user":
+        t.__class__ = ITYPE_CLASS_MAP.get('user')
+    elif instance['itype'] == 'object' and instance['sub_type'] == "cybexp_org":
+        t.__class__ = ITYPE_CLASS_MAP.get('org')
+    else: 
+        t.__class__ = ITYPE_CLASS_MAP.get(instance['itype'])
 ##    if validate: t.validate()
     return t
 

@@ -72,7 +72,7 @@ class Org(Identity):
                     else:
                         new_acl.append(u._hash)
                 self._acl = list(set(new_acl))
-                self._update()
+                self._update({"_acl": new_acl})
                 return True
             else:
                 raise TypeError
