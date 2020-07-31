@@ -19,7 +19,7 @@ class User(Identity):
         hashed_pass = hashlib.sha256(password.encode('utf-8')).hexdigest()
         pass_att = Attribute('password', hashed_pass, _backend=self._backend)
 
-        name_att = Attribute('name', "test name", _backend=self._backend)
+        name_att = Attribute('name', name, _backend=self._backend)
 
         super().__init__('cybexp_user', [email_att, pass_att, name_att],
                          **kwargs)
