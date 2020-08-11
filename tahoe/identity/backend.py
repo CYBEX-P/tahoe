@@ -19,16 +19,26 @@ class IdentityBackend(tahoe.MongoBackend):
     special methods to manage them.
     """
 
-    def get_config(self, plugin_lst=None, enabled=True):
+    def create_user(self, u):
+        return NotImplemented
+
+    def get_config(self, plugin_lst=None, name_lst=None, enabled=True):
         ae = tahoe.Attribute('enabled', enabled)
         
         q = {'sub_type': 'cybexp_input_config', '_cref': {'$eq': ae._hash}}
-        
-        _hash_lst = []
-        if plugin_lst:
-            for p in plugin_lst:
-              ap = tahoe.Attribute('plugin', p)
-              _hash_lst.append(ap._hash)
+            
+        if plugin_lst or name_lst:
+            _hash_lst = []
+
+            if plugin_lst:
+                for p in plugin_lst:
+                    ap = tahoe.Attribute('plugin', p)
+                    _hash_lst.append(ap._hash)
+
+            if name_lst:
+                  for n in name_lst:
+                      an = tahoe.Attribute('name', n)
+                      _hash_lst.append(an._hash)
             
             q['_cref']['$in']: _hash_lst
         

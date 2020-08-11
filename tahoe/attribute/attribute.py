@@ -4,7 +4,7 @@ An attribute holds a single piece of information, like an IP address.
 
 import pdb
 
-if __name__ != 'tahoe.attribute':
+if __name__ != 'tahoe.attribute.attribute':
     import sys, os
     sys.path = ['..', os.path.join('..', '..')] + sys.path
     del sys, os
@@ -15,6 +15,7 @@ import tahoe
 # === Global Variables ===
 
 dtresolve = tahoe.misc.dtresolve
+limitskip = tahoe.misc.limitskip
 
 _P = {'_id': 0}
 """Default projection for MongoDB queries"""
@@ -130,7 +131,6 @@ class Attribute(tahoe.Instance):
             If data is not `int/float/str/bool/None`.
         """
         
-        
         self._validate_data(data)
 
         self.itype = 'attribute'
@@ -182,7 +182,13 @@ class Attribute(tahoe.Instance):
         
         return self._backend.count_documents(q)
 
-    def events(self, p=_P, start=0, end=None, limit=0, skip=0, page=1,
+    def degree(self, itype='all'):
+        q = {'_ref': self._hash}
+        if itype != 'all':
+            q['itype'] = itype
+        return self._backend.count_documents(q)
+
+    def events(self, p=_P, start=0, end=0, limit=0, skip=0, page=1,
               category='all', context='all'):
         """
         Fetch related events in a time range, with pagination.
@@ -216,7 +222,7 @@ class Attribute(tahoe.Instance):
             Iterable of events which include this object.
         """
 
-        self._valdiate_param(start=start, end=end,
+        self._validate_param(start=start, end=end,
                              limit=limit, skip=skip, page=page)
         
         q = {"itype": "event", **dtresolve(start, end)}
