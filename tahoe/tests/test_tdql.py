@@ -125,8 +125,6 @@ class AllTest(unittest.TestCase):
         
         builtins.q_d = q._backend.find_one({'_hash': q._hash})
 
-        
-
         EQ(q.data['socket'][0]['host'][0], 'localhost')
         EQ(q_d['data']['socket'][0]['host'][0], 'localhost')
         EQ(q.data['socket'][0]['port'][0], 100)

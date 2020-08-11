@@ -584,7 +584,6 @@ def make_threatrank_data():
     event_email_3 = Event('email', data, oid, timestamp3)
 
     builtins.event_email_3 = event_email_3
-    pdb.set_trace()
 
         
 class ThreatRankTest(unittest.TestCase):
