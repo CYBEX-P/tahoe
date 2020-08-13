@@ -27,7 +27,7 @@ The `_ref` field makes the data a graph with 3 nodes: `0xA2..,
 """
 
 
-if __name__ != 'tahoe.object':
+if __name__ != 'tahoe.object.object':
     import sys, os
     sys.path = ['..', os.path.join('..', '..')] + sys.path
     del sys, os

@@ -1,4 +1,5 @@
 """`unittests for tahoe.event"""
+import builtins
 
 if __name__ != 'tahoe.tests.test_event':
     import sys
@@ -27,7 +28,7 @@ def tearDownModule():
 
 
 def make_test_data():
-    import builtins
+    
     builtins.afn = Attribute('filename', 'virus.exe')
     builtins.afs = Attribute('filesize', 20012)
     builtins.of = Object('file', [afn, afs])
@@ -422,344 +423,183 @@ class CategoryTest(unittest.TestCase):
         self.assertEqual(e_d['category'], 'benign')
         
 
-    
-##class SubTypeTest(unittest.TestCase):
-##    """
-##    Examples
-##    --------
-##    `sub_type` must be valid Python identifier.
-##
-##        >>> a = Attribute("test", "test")
-##        >>> Object(1, [a])
-##        TypeError: sub_type = <class 'int'>, expected 'str'
-##
-##        >>> Object("str w space", [a])
-##        ValueError: sub_type = 'str w space'
-##
-##        >>> Object("str-w-minus", [a])
-##        ValueError: sub_type = 'str-w-minus'
-##
-##        >>> o = Object("test", [a])
-##        >>> o.data
-##        {'test': ['test']}
-##        >>> 
-##    """
-##    
-##    def test_type(self):
-##        data = Attribute("test", "test")
-##        orgid = 'a441b15fe9a3cf56661190a0b93b9dec7d041272' \
-##                '88cc87250967cf3b52894d11'''
-##        timestamp = -1
-##        e = Event('test', data, orgid, timestamp)
-##        self.assertRaises(TypeError, Object, 1, [a])
-##
-##    def test_value_space(self):
-##        a = Attribute('test', 'test')
-##        self.assertRaises(ValueError, Object, 'str w space', [a])
-##
-##    def test_value_minus(self):
-##        a = Attribute('test', 'test')
-##        self.assertRaises(ValueError, Object, 'str-w-minus', [a])
-##
-##    def test_value_underscore(self):
-##        a = Attribute('test', 'test')
-##        o = Object('test_object', [a])        
-##        
-##
-##class DataTest(unittest.TestCase):
-##    """
-##    Examples
-##    --------
-##    Data must be list of Attribute, Object::
-##
-##        >>> o =  Object('test', 0)
-##        TypeError: instances must be of type tahoe
-##        <class 'tahoe.attribute.attribute.Attribute'>
-##        or <class 'tahoe.object.object.Object'>
-##
-##        >>> o = Object('test', ['string'])
-##        TypeError: instances must be of type tahoe
-##        <class 'tahoe.attribute.attribute.Attribute'>
-##        or <class 'tahoe.object.object.Object'>
-##
-##        >>> o = Object('test', [])
-##        ValueError: data cannot be empty
-##
-##        >>> a = Attribute('test', 'test')
-##        >>> o = Object('test', [a, 2])
-##        TypeError: instances must be of type tahoe
-##        <class 'tahoe.attribute.attribute.Attribute'>
-##        or <class 'tahoe.object.object.Object'>
-##        
-##        >>> o = Object('test', [a])
-##        >>> o.data
-##        {'test': ['test']}
-##
-##        >>> import json
-##        >>> a1 = Attribute('ipv4', '1.1.1.1')
-##        >>> a1.data
-##        '1.1.1.1'
-##        >>> o1 = Object('host', [a1])
-##        >>> o1.data
-##        {'ipv4': ['1.1.1.1']}
-##        >>> a2 = Attribute('url', 'example.com')
-##        >>> a2.data
-##        'example.com'
-##        >>> o2 = Object('url', [a2, o1])
-##        >>> json.dumps(o2.data, indent=2)
-##        >>> print(json.dumps(o2.data, indent=2))
-##        {
-##          "host": [
-##            {
-##              "ipv4": [
-##                "1.1.1.1"
-##              ]
-##            }
-##          ],
-##          "url": [
-##            "example.com"
-##          ]
-##        }
-##        >>> print(o2._hash)
-##        b228a4f398f3b974f16ba18c741dbeb09655e4ec9021b7e9c8d90a4210977ce6
-##             
-##    """
-##
-##    def test_type_int(self):
-##        self.assertRaises(TypeError, Object, 'test', 0)
-##
-##    def test_type_str(self):
-##        self.assertRaises(TypeError, Object, 'test', ['string'])
-##
-##    def test_empty_list(self):
-##        self.assertRaises(ValueError, Object, 'test', [])
-##
-##    def test_int_in_list(self):
-##        a = Attribute('test', 'test')
-##        self.assertRaises(TypeError, Object, 'test', [a, 2])
-##
-##    def test_typ_str(self):
-##        a1 = Attribute('ipv4', '1.1.1.1')
-##        o1 = Object('host', [a1])
-##        a2 = Attribute('url', 'example.com')
-##        o2 = Object('url', [a2, o1])
-##
-##        h = 'b228a4f398f3b974f16ba18c741dbeb09655e4ec9021b7e9c8d90a4210977ce6'
-##        self.assertEqual(o2._hash, h)                         
-##        
-##
-##class AddRemoveInstanceTest(unittest.TestCase):
-##    """
-##    Examples
-##    --------
-##
-##    Add or remove an attribute from an object::
-##    
-##        >>> a1 = Attribute('username', 'johndoe')
-##        >>> a2 = Attribute('password', '123456')
-##        >>> o1 = Object('user', [a1, a2])
-##        >>> o1.data
-##        {'password': ['123456'], 'username': ['johndoe']}
-##        >>> a3 = Attribute('password', 'abcdef')
-##        >>> o1.add_instance(a3)
-##        >>> o1.data
-##        {'password': ['123456', 'abcdef'], 'username': ['johndoe']}
-##        >>> o1.remove_instance(a2)
-##        >>> o1.data
-##        {'username': ['johndoe'], 'password': ['abcdef']}
-##
-##        >>> a1 = Attribute('username', 'johndoe')
-##        >>> a2 = Attribute('password', '123456')
-##        >>>
-##        >>> o1 = Object('test1', a1) 
-##        >>> o2 = Object('test2', o1)
-##        >>> o3 = Object('test3', o2)
-##        >>>
-##        >>> o1.add_instance(a2)
-##        >>>
-##        >>> r = o2._backend.find_one({'_hash': o2._hash})
-##        >>> r is None
-##        True
-##        >>>
-##        >>> r = o3._backend.find_one({'_hash': o3._hash})
-##        >>> r is None
-##        True
-##        >>>
-##        >>> o2 = Object('test2', o1)
-##        >>> o2.data
-##        {'test1': [{'password': ['123456'], 'username': ['johndoe']}]}
-##        >>>
-##        >>> o3 = Object('test3', o2)
-##        >>> o3.data
-##        {'test2': [{'test1': [{'password': ['123456'],
-##        'username': ['johndoe']}]}]}
-##        >>>
-##        >>> o1.add_instance(a3)
-##        >>>
-##        >>> o2 = Object('test2', o1)
-##        >>> o2.data
-##        {'test1': [{'password': ['abcdef', '123456'],
-##        'username': ['johndoe']}]}
-##        >>>
-##        >>> o3 = Object('test3', o2)
-##        >>> o3.data
-##        {'test2': [{'test1': [{'password': ['abcdef', '123456'],
-##        'username': ['johndoe']}]}]}
-##        >>>
-##        >>> o1.remove_instance(a2)
-##        >>>
-##        >>> o2 = Object('test2', o1)
-##        >>> o2.data
-##        {'test1': [{'username': ['johndoe'], 'password': ['abcdef']}]}
-##        >>>
-##        >>> o3 = Object('test3', o2)
-##        >>> o3.data
-##        {'test2': [{'test1': [{'username': ['johndoe'],
-##        'password': ['abcdef']}]}]}
-##        
-##    """
-##
-##    @classmethod
-##    def setUpClass(cls):
-##        self.assert isinstance(Object._backend, MongoBackend)
-##        Attribute._backend.drop()
-##
-##    def test00(self):
-##        a1 = Attribute('username', 'johndoe')
-##        a2 = Attribute('password', '123456')      
-##        a3 = Attribute('password', 'abcdef')        
-##
-##    def test01_add_instance(self):
-##        a1 = Attribute('username', 'johndoe')
-##        a2 = Attribute('password', '123456')
-##        o1 = Object('user', [a1, a2])
-##        
-##        a3 = Attribute('password', 'abcdef')
-##        o1.add_instance(a3)
-##        
-##        self.assertIn('abcdef', o1.data['password'])
-##        self.assertIn(a3._hash, o1._cref)
-##        self.assertIn(a3._hash, o1._ref)
-##
-##        o1_d = o1._backend.find_one({'_hash': o1._hash}, {'_id': 0})
-##
-##        self.assertIn('abcdef', o1_d['data']['password'])
-##        self.assertIn(a3._hash, o1_d['_cref'])
-##        self.assertIn(a3._hash, o1_d['_ref'])
-##
-##    def test02_remove_instance(self):
-##        a1 = Attribute('username', 'johndoe')
-##        a2 = Attribute('password', '123456')      
-##        a3 = Attribute('password', 'abcdef')
-##        o1 = Object('user', [a1, a2, a3])
-##        o1.remove_instance(a2)
-##
-##        self.assertEqual(o1.data['password'][0], 'abcdef')
-##        self.assertNotIn(a2._hash, o1._cref)
-##        self.assertNotIn(a2._hash, o1._ref)
-##
-##        o1_d = o1._backend.find_one({'_hash': o1._hash}, {'_id': 0})
-##
-##        self.assertEqual(o1_d['data']['password'][0], 'abcdef')
-##        self.assertNotIn(a2._hash, o1_d['_cref'])
-##        self.assertNotIn(a2._hash, o1_d['_ref'])
-##
-##    def test03_replace_instance(self):
-##        a1 = Attribute('username', 'johndoe')
-##        a2 = Attribute('password', '123456')
-##        a3 = Attribute('password', 'abcdef')
-##        
-##        o1 = Object('user', [a1, a2])
-##
-##        o1_d = o1._backend.find_one({'_hash': o1._hash}, {'_id': 0})
-##        self.assertEqual(['123456'], o1_d['data']['password'])
-##
-##        o1.replace_instance(a2, a3)
-##
-##        o1_d = o1._backend.find_one({'_hash': o1._hash}, {'_id': 0})
-##        self.assertEqual(['abcdef'], o1_d['data']['password'])
-##        
-##        
-##
-##    def test04_chain_edit(self):
-##        a1 = Attribute('username', 'johndoe')
-##        a2 = Attribute('password', '123456')
-##        a3 = Attribute('password', 'abcdef')
-##
-##        o1 = Object('test1', a1)
-##        o2 = Object('test2', o1)
-##        o3 = Object('test3', o2)
-##
-##        # ----
-##        o1.add_instance(a2)
-##
-##        self.assertIsNone(o2._backend.find_one({'_hash': o2._hash}))
-##        self.assertIsNone(o3._backend.find_one({'_hash': o3._hash}))
-##
-##        o2 = Object('test2', o1)
-##        o3 = Object('test3', o2)
-##
-##        self.assertIn('password', o2.data['test1'][0])
-##        self.assertIn('123456', o2.data['test1'][0]['password'])
-##
-##        self.assertIn('password', o3.data['test2'][0]['test1'][0])
-##        self.assertIn('123456', o3.data['test2'][0]['test1'][0]['password'])
-##
-##        # ----
-##        o1.add_instance(a3)
-##
-##        self.assertIsNone(o2._backend.find_one({'_hash': o2._hash}))
-##        self.assertIsNone(o3._backend.find_one({'_hash': o3._hash}))
-##
-##        o2 = Object('test2', o1)
-##        o3 = Object('test3', o2)
-##
-##        self.assertIn('password', o2.data['test1'][0])
-##        self.assertIn('abcdef', o2.data['test1'][0]['password'])
-##
-##        self.assertIn('password', o3.data['test2'][0]['test1'][0])
-##        self.assertIn('abcdef', o3.data['test2'][0]['test1'][0]['password'])
-##
-##        # ----
-##        o1.remove_instance(a2)
-##
-##        self.assertIsNone(o2._backend.find_one({'_hash': o2._hash}))
-##        self.assertIsNone(o3._backend.find_one({'_hash': o3._hash}))
-##
-##        o2 = Object('test2', o1)
-##        o3 = Object('test3', o2)
-##
-##        self.assertIn('password', o2.data['test1'][0])
-##        self.assertNotIn('123456', o2.data['test1'][0]['password'])
-##
-##        self.assertIn('password', o3.data['test2'][0]['test1'][0])
-##        self.assertNotIn('123456', o3.data['test2'][0]['test1'][0]['password'])
-##
-##
-##        # ----
-##        
-##        o1 = Object('test', a1)
-##        o2 = Object('test', o1)
-##        o3 = Object('test', o2)
-##        
-##        o1.add_instance(a2)   
-##
-##        self.assertIsNone(o2._backend.find_one({'_hash': o2._hash}))
-##        self.assertIsNone(o3._backend.find_one({'_hash': o3._hash}))
-##
-##        o2 = Object('test', o1)
-##        o3 = Object('test', o2)
-##
-##        self.assertIn('password', o2.data['test'][0])
-##        self.assertIn('123456', o2.data['test'][0]['password'])
-##
-##        self.assertIn('password', o3.data['test'][0]['test'][0])
-##        self.assertIn('123456', o3.data['test'][0]['test'][0]['password'])
-##
-##
-###    
+
+def make_threatrank_data():
+    oid = "identity--e7c981ed-ab33-4d7a-b55d-db9413560040"
+
+    # =================================
+    # Event Email 1 ===================
+    # =================================
+
+    timestamp1 = 1236092478
+
+    received = ['(qmail 71864 invoked by uid 60001); Tue, 03 Mar 2009 15:01:19 +0000',
+                'from [60.abc.xyz.215] by web53402.mail.re2.yahoo.com via HTTP; Tue, 03 Mar 2009 07:01:18 -0800 (PST)']
+    att_received_0 = Attribute('att_email_header_received', received[0])
+    att_received_1 = Attribute('att_email_header_received', received[1])
+    obj_received = Object('obj_email_header_received', [att_received_0, att_received_1])
+
+    from_ip = '60.abc.xyz.215'
+    from_email = 'dn...etto@yahoo.com'
+    att_from_ip = Attribute('ip', from_ip)
+    att_from_email = Attribute('email_addr', from_email)
+    obj_from = Object('from', [att_from_ip, att_from_email])
+
+    subject = 'AIAA Technical Committees'
+    att_subject = Attribute('subject', subject)
+                      
+    to_email = 'johndoe1@lockheedmartin.com'
+    att_to_email = Attribute('email_addr', to_email)
+    obj_to = Object('to', att_to_email)
+
+    reply_to = 'dn...etto@yahoo.com'
+    att_reply_to = Attribute('email_addr', reply_to)
+    obj_reply_to = Object('reply_to', att_reply_to)
+
+    message_id = '<107017.64068.qm@web53402.mail.re2.yahoo.com>'
+    att_message_id = Attribute('message_id', message_id)
+
+    mime_ver = '1.0'
+    att_mime_ver = Attribute('mime_ver', mime_ver)
+
+    x_mailer = 'YahooMailWebService/0.7.289.1'
+    att_x_mailer = Attribute('x_mailer', x_mailer)
+
+    content_type = 'multipart/mixed; boundary="Boundary_(ID_Hq9CkDZSoSvBMukCRm7rsg)"'
+    att_content_type = Attribute('content_type', content_type)
+
+    body = """Please submit one copy (photocopies are acceptable) of this form, and one copy of nominee’s resume to: AIAA Technical Committee Nominations, 1801 Alexander Bell Drive, Reston, VA 20191. Fax number is 703/264-7551. Form can also be submitted via our web site at www.aiaa.org, Inside AIAA, Technical Committees"""
+    att_body = Attribute('body', body)
+
+    data = [obj_received, obj_from, att_subject, obj_to, obj_reply_to, att_message_id,
+            att_mime_ver, att_x_mailer, att_content_type, att_body]
+    mal_data = [att_from_ip, att_from_email, att_subject, att_reply_to, att_message_id, att_body]
+    event_email_1 = Event('email', data, oid, timestamp1, mal_data=mal_data)
+    event_email_1.set_category('malicious')
+
+    builtins.event_email_1 = event_email_1
 
 
+
+    # =================================
+    # Event Email 2 ===================
+    # =================================
+
+    timestamp2 = 1236151908
+
+    received = ['(qmail 97721 invoked by uid 60001); 4 Mar 2009 14:35:22 -0000',
+                'from [216.abc.xyz.76] by web53411.mail.re2.yahoo.com via HTTP; Wed, 04 Mar 2009 06:35:20 PST']
+    att_received_0 = Attribute('att_email_header_received', received[0])
+    att_received_1 = Attribute('att_email_header_received', received[1])
+    obj_received = Object('obj_email_header_received', [att_received_0, att_received_1])
+
+    from_ip = '216.abc.xyz.76'
+    from_email = 'dn...etto@yahoo.com'
+    att_from_ip = Attribute('ip', from_ip)
+    att_from_email = Attribute('email_addr', from_email)
+    obj_from = Object('from', [att_from_ip, att_from_email])
+
+    subject = '7th Annual U.S. Missile Defense Conference'
+    att_subject = Attribute('subject', subject)
+                      
+    to_email = 'johndoe2@lockheedmartin.com'
+    att_to_email = Attribute('email_addr', to_email)
+    obj_to = Object('to', att_to_email)
+
+    reply_to = 'dn...etto@yahoo.com'
+    att_reply_to = Attribute('email_addr', reply_to)
+    obj_reply_to = Object('reply_to', att_reply_to)
+
+    message_id = '<107017.64068.qm@web53402.mail.re2.yahoo.com>'
+    att_message_id = Attribute('message_id', message_id)
+
+    mime_ver = '1.0'
+    att_mime_ver = Attribute('mime_ver', mime_ver)
+
+    x_mailer = 'YahooMailWebService/0.7.289.1'
+    att_x_mailer = Attribute('x_mailer', x_mailer)
+
+    content_type = 'multipart/mixed; boundary="0-760892832-1236177320=:97248"'
+    att_content_type = Attribute('content_type', content_type)
+
+    body = "Welcome to the 7th Annual U.S. Missile Defense Conference"
+    att_body = Attribute('body', body)
+
+    data = [obj_received, obj_from, att_subject, obj_to, obj_reply_to, att_message_id,
+            att_mime_ver, att_x_mailer, att_content_type, att_body]
+    #mal_data = [att_from_ip, att_from_email, att_subject, att_reply_to, att_message_id, att_body]
+    event_email_2 = Event('email', data, oid, timestamp2)
+
+    builtins.event_email_2 = event_email_2
+
+
+
+
+    # =================================
+    # Event Email 3 ===================
+    # =================================
+
+
+    timestamp3 = 1237793508
+
+    received = ['(qmail 97721 invoked by uid 60001); 4 Mar 2009 14:35:22 -0000',
+                '(qmail 82085 invoked by uid 60001); Mon, 23 Mar 2009 17:14:21 +0000',
+                'from [216.abc.xyz.76] by web43406.mail.sp1.yahoo.com via HTTP; Mon, 23 Mar 2009 10:14:21 -0700 (PDT)']
+    att_received_0 = Attribute('att_email_header_received', received[0])
+    att_received_1 = Attribute('att_email_header_received', received[1])
+    att_received_2 = Attribute('att_email_header_received', received[2])                        
+    obj_received = Object('obj_email_header_received', [att_received_0, att_received_1, att_received_2])
+
+    from_ip = '216.abc.xyz.76'
+    from_email = 'ginette.c...@yahoo.com'
+    att_from_ip = Attribute('ip', from_ip)
+    att_from_email = Attribute('email_addr', from_email)
+    obj_from = Object('from', [att_from_ip, att_from_email])
+
+    subject = 'Celebrities Without Makeup'
+    att_subject = Attribute('subject', subject)
+                      
+    to_email = 'johndoe3@lockheedmartin.com'
+    att_to_email = Attribute('email_addr', to_email)
+    obj_to = Object('to', att_to_email)
+
+    message_id = '<297350.78665.qm@web43406.mail.sp1.yahoo.com>'
+    att_message_id = Attribute('message_id', message_id)
+
+    mime_ver = '1.0'
+    att_mime_ver = Attribute('mime_ver', mime_ver)
+
+    x_mailer = 'YahooMailWebService/0.7.289.1'
+    att_x_mailer = Attribute('x_mailer', x_mailer)
+
+    content_type = 'multipart/mixed; boundary="Boundary_(ID_DpBDtBoPTQ1DnYXw29L2Ng)"'
+    att_content_type = Attribute('content_type', content_type)
+
+    body = ""
+    att_body = Attribute('body', body)
+
+    data = [obj_received, obj_from, att_subject, obj_to, att_message_id,
+            att_mime_ver, att_x_mailer, att_content_type, att_body]
+    #mal_data = [att_from_ip, att_from_email, att_subject, att_reply_to, att_message_id, att_body]
+    event_email_3 = Event('email', data, oid, timestamp3)
+
+    builtins.event_email_3 = event_email_3
+
+        
+class ThreatRankTest(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        assert isinstance(Event._backend, (MongoBackend, MockMongoBackend))
+        Event._backend.drop()
+        make_threatrank_data()
+
+    def test_01(self):
+        tr = event_email_1.threatrank()
+        print(tr)
+        tr = event_email_2.threatrank()
+        print(tr)
+        tr = event_email_3.threatrank()
+        print(tr)
 
         
 

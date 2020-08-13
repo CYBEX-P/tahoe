@@ -4,14 +4,12 @@ ITYPE_CLASS_MAP = {}
 def parse(instance, backend, validate=True):
     if isinstance(instance, str): instance = json.loads(instance)
     instance.pop("_id", None)
-    t = ITYPE_CLASS_MAP.get('attribute')('mock', 'mock')
+    t = ITYPE_CLASS_MAP['attribute']['default']('mock', 'mock')
     t.__dict__ = instance
-    if instance['itype'] == 'object' and instance['sub_type'] == "cybexp_user":
-        t.__class__ = ITYPE_CLASS_MAP.get('user')
-    elif instance['itype'] == 'object' and instance['sub_type'] == "cybexp_org":
-        t.__class__ = ITYPE_CLASS_MAP.get('org')
-    else: 
-        t.__class__ = ITYPE_CLASS_MAP.get(instance['itype'])
+
+    itype = instance['itype']
+    sub_type = instance['sub_type']
+    t.__class__ = getclass(itype, sub_type)
 ##    if validate: t.validate()
     return t
 
@@ -25,11 +23,22 @@ def _create_itype_class_map():
     from .identity import Org, User
     
 
-    ITYPE_CLASS_MAP['attribute'] = Attribute
-    ITYPE_CLASS_MAP['event'] = Event
-    ITYPE_CLASS_MAP['object'] = Object
-    ITYPE_CLASS_MAP['org'] = Org
-    ITYPE_CLASS_MAP['raw'] = Raw
-    ITYPE_CLASS_MAP['session'] = Session
-    ITYPE_CLASS_MAP['tdql'] = TDQL
-    ITYPE_CLASS_MAP['user'] = User
+    ITYPE_CLASS_MAP['attribute'] = {'default': Attribute}
+    ITYPE_CLASS_MAP['event'] = {'default': Event}
+    ITYPE_CLASS_MAP['object'] = {'default': Object}
+    ITYPE_CLASS_MAP['object']['query'] = TDQL
+    
+    ITYPE_CLASS_MAP['org'] = {'default': Org}
+    ITYPE_CLASS_MAP['raw'] = {'default': Raw}
+    ITYPE_CLASS_MAP['session'] = {'default': Session}
+    
+    ITYPE_CLASS_MAP['user'] = {'default':User}
+
+def getclass(itype, sub_type='default'):
+    global ITYPE_CLASS_MAP
+    try:
+        class_ = ITYPE_CLASS_MAP[itype][sub_type]
+    except KeyError:
+        class_ = ITYPE_CLASS_MAP[itype]['default']
+    return class_
+    

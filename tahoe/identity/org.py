@@ -79,30 +79,33 @@ class Org(Identity):
         return False
 
     def addadmin(self, user):
-        pass
+        return NotImplemented
+        #
 
     def addconfig(self, config):
-        pass
+        return NotImplemented
 
     def adduser(self, user):
-        pass
+        return NotImplemented
+
+    def getadmin(self):
+        return NotImplemented
     
     def deladmin(self, user):
-        # if user is admin
-        pass
+        return NotImplemented
 
     def deluser(self, user):
-        # is admiin?
-        pass
+        return NotImplemented
 
     @property
     def _unique(self):
         unique = self.itype + self.sub_type + self.data['orgname'][0]
         return unique.encode('utf-8')
 
-    def isAdmin(self, user_id):
-        return False
-        # TODO
 
-    # def isMember(self, user_id):
+    def _updatehash(self):
+##        newhash = sha256(self._unique)
+        return NotImplemented
+        # update its _hash in the MongoDB
+        # in all references (_ref, _cref, _usr_ref, _acl...)
 

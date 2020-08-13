@@ -50,9 +50,11 @@ This above event is a graph with `5` edges: `0xE1 --> 0xB1, 0xE1 -->
 objects and their attributes must be included in the list.
 """
 
+
+from datetime import datetime
 import pdb
 
-if __name__ != 'tahoe.event':
+if __name__ != 'tahoe.event.event':
     import sys, os
     sys.path = ['..', os.path.join('..', '..')] + sys.path
     del sys, os
@@ -237,7 +239,20 @@ class Event(tahoe.OES):
         
         super().__init__(sub_type=sub_type, **kwargs)
 
+    def daysold(self):
+        today = datetime.today() 
+        event_time =  datetime.utcfromtimestamp(self.timestamp)
+        dp = (today - event_time).days
+        return dp
 
+    def degree(self, itype='all'):
+        if itype != 'all':
+            q = {'itype': itype, '_hash': {'$in': self._ref}}
+            return self._backend.count_documents(q)
+        else:
+            return len(self._ref)
+
+    
     def get_context(self, data):
         if not isinstance(data, list):
             data = [data]
@@ -258,6 +273,9 @@ class Event(tahoe.OES):
     def isparent(self, data):
         data = self._validate_data(data)
         return all([I._hash in self._ref for I in data])
+
+    def sessions(self, p=_P):
+        return self._backend.find({'itype': 'session', '_ref': self._hash}) 
 
     def set_category(self, category):
         """
@@ -348,6 +366,66 @@ class Event(tahoe.OES):
 
         self._update({'_ben_ref': ben_ref, '_mal_ref': mal_ref})
 
+
+    def threatrank(self):
+##        pathsdict = dict()
+
+        def findpaths(src, dst, curpath, curpathhash, curdepth=0):
+            if src._hash == dst._hash:
+                return [curpath]
+            elif curdepth > 5:
+                return [[]]
+
+            if src.itype == 'event':
+                q = {'itype': 'attribute', '_hash': {'$in': src._ref}}
+                rel = self._backend.find(q, _P)
+            elif src.itype == 'attribute':
+                q = {'itype': 'event', '_ref': src._hash}
+                rel = src._backend.find(q, _P)
+
+            paths = []
+            for i in rel:
+                i = tahoe.parse(i, self._backend, validate=False)
+                if i._hash in curpathhash:
+                    continue
+                i_paths = findpaths(i, dst, curpath+[i],
+                                    curpathhash.union({i._hash}), curdepth+1)
+                if i_paths not in paths:
+                    paths += i_paths
+
+            return paths
+                
+        def threatrankpath(path):
+            tr = -1
+            
+            for n in path:
+                d = 0
+                if n.itype == 'attribute':
+                    L = n.degree(itype='event')
+                elif n.itype == 'event':
+                    L = n.degree(itype='attribute')
+                    d = n.daysold()
+                tr = tr*0.998**d / L
+            return tr              
+
+
+        if self.category == 'malicious':
+            return -1
+        
+        tr = 0
+        allpath = []
+
+        q = {'itype': 'event', 'category': 'malicious'}
+        emal = self._backend.find(q, _P)
+        for e in emal:
+            e = tahoe.parse(e, self._backend, validate=False)
+            paths = findpaths(e, self, [e], {e._hash})
+            allpath += paths
+
+        for path in allpath:
+            tr += threatrankpath(path)
+        return tr
+
     
     def _make_context_ref(self, ben_data=None, mal_data=None, unk_data=None):
         if not (ben_data or mal_data or unk_data):
@@ -402,7 +480,7 @@ class Event(tahoe.OES):
         return list(set_ben_ref), list(set_mal_ref)
     
 
-    def related_hash(self, level=0, visited=None, start=0, end=None,
+    def related_hash(self, level=0, visited=None, start=0, end=0,
                      limit=0, skip=0, page=1):
 
         if visited is None:
@@ -419,12 +497,12 @@ class Event(tahoe.OES):
 
         r = self.sessions({"itype":1,"uuid":1,"_eref":1})
         for s in r:
-            S = parse(s, self._backend, validate=False)
+            S = tahoe.parse(s, self._backend, validate=False)
             this_rel_hash = S.related_hash(level, visited.update(self._hash),
                                            start=statr, end=end)
             all_rel_hash.update(this_rel_hash)
         return all_rel_hash
-    
+
 
     @property
     def _unique(self):
