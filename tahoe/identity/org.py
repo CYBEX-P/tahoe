@@ -65,7 +65,7 @@ class Org(Identity):
 
         if admin_hash in self._adm_ref:
             if isinstance(acl, list) and all([isinstance(s,str) or self._validate_instance(s, ['user']) for s in acl]):
-                new_acl = self._adm_ref
+                new_acl = self._adm_ref # admins will always be in the ACL
                 for u in acl:
                     if isinstance(u, str):
                         new_acl.append(u)

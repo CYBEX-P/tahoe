@@ -40,7 +40,7 @@ org2 = Org("org of user2",[u3, u2],[u2],"u2_Org")
 
 print("org1: {'admin':[u1], 'users': [u1, u2]}")
 print("org2: {'admin':[u2], 'users': [u2, u3]}")
-print("org3: {'admin':[u99], 'users': [u99]}")
+print("org_random: {'admin':[u99], 'users': [u99]}")
 print()
 
 
@@ -86,7 +86,7 @@ query = {'itype': 'event'}
 filter = {"_hash":1, "data":1,"itype":1,"_id":0 }
 
 print("Query:",query)
-print("FIlter:",filter)
+print("Filter:",filter)
 print()
 
 r_control = mongo_backend.find(query,filter)
