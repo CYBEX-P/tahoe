@@ -27,7 +27,12 @@ class User(Identity):
     def __repr__(self):
         return f"User('{self.data['email_addr'][0]}')"
 
+    def _get_allowed_acl(self):
+        pass
+
     def addconfig(self, jsonfile):
+        # should this be allowed ? 
+        # self._get_alled_acl()
         pass
 
     def changepass(self, newpassword):
@@ -53,8 +58,9 @@ class User(Identity):
         return unique.encode('utf-8')
 
 
-
-
+    def change_email(self):
+        pass
+        # if we change the email, hash changes then we need to update reference filed in orgs
 
 
 

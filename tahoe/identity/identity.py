@@ -3,6 +3,7 @@ Identity class is a base class for User and Org.
 """
 
 import uuid
+import jwt
 
 if __name__ != 'tahoe.identity.identity':
     import sys, os
@@ -25,10 +26,21 @@ class Identity(tahoe.Object):
         ----------
         token : str
             JWT token to be decoded.
+        Returns
+        -------
+        decoded: dict or None
+            decoded payload
+        Raises
+        ------
+        jwt.exceptions.*
+            when token can not be decoded
         """
         secret = self.secret
         algo = self.algo
-        return jwt.decode(token, secret, algo)
+        decoded = jwt.decode(token, secret, algo)
+        return decoded
+
+
 
 ##    def isvaliduser(self, token):
 ##        return self.getpayload(token)['sub_type'] == 'user'

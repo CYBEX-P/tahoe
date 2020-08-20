@@ -19,6 +19,10 @@ class IdentityBackend(tahoe.MongoBackend):
     special methods to manage them.
     """
 
+    def __init__(self, mongo_url=None, dbname="identity_db",
+                 collname="identity_coll", create=False, **kwargs):
+        super().__init__(mongo_url, dbname, collname, create, **kwargs)
+        
     def create_user(self, u):
         return NotImplemented
 
@@ -40,7 +44,7 @@ class IdentityBackend(tahoe.MongoBackend):
                       an = tahoe.Attribute('name', n)
                       _hash_lst.append(an._hash)
             
-            q['_cref']['$in']: _hash_lst
+            q['_cref']['$in'] = _hash_lst
         
         r = self.find(q, {'_id': 0})
         return list(r)
@@ -65,12 +69,29 @@ class IdentityBackend(tahoe.MongoBackend):
             MongoDB projection
         """
 
-        thisuser = tahoe.identity.User(email, backend=tahoe.NoBackend())
-        return self.backend.find_one({"_hash": thisuser._hash}, p)
+        thisuser = tahoe.identity.User(email, _backend=tahoe.NoBackend())
+        return self.find_one({"_hash": thisuser._hash}, p)
+
+    def find_org(self, orgname, p=P):
+        """
+        Find org by orgname; orgname is unique id of org in TAHOE.
+
+        Parameters
+        ----------
+        orgname : str
+            orgname (unique id) of orgs
+        p : dict
+            MongoDB projection
+        """
+
+        thisorg = tahoe.identity.Org(orgname, _backend=tahoe.NoBackend())
+        return self.find_one({"_hash": thisorg._hash}, p) 
 
     def user_exists(self, email):
         return self.find_user(email, {**P, "_hash":1}) is not None
-    
+
+    def org_exists(self, orgname):
+        return self.find_org(orgname, {**P, "_hash":1}) is not None
 
 class MockIdentityBackend(tahoe.backend.MockMongoBackend):
     """
@@ -93,6 +114,24 @@ class MockIdentityBackend(tahoe.backend.MockMongoBackend):
         thisuser = tahoe.identity.User(email, backend=tahoe.NoBackend())
         return self.backend.find_one({"_hash": thisuser._hash}, p)
 
+    def find_org(self, orgname, p=P):
+        """
+        Find org by orgname; orgname is unique id of org in TAHOE.
+
+        Parameters
+        ----------
+        orgname : str
+            orgname (unique id) of orgs
+        p : dict
+            MongoDB projection
+        """
+
+        thisorg = tahoe.identity.Org(orgname, _backend=tahoe.NoBackend())
+        return self.find_one({"_hash": thisorg._hash}, p) 
+
     def user_exists(self, email):
         return self.find_user(email, {**P, "_hash":1}) is not None
+
+    def org_exists(self, orgname):
+        return self.find_org(orgname, {**P, "_hash":1}) is not None
 
