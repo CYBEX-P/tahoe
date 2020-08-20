@@ -168,14 +168,13 @@ class DAM(MongoBackend):
          if 'orgid' in query: # orgid
             print(query)
             raise ImpossibleError
-    
-         allowed_orgs = self._get_acl_for_user(user_hash)
-         acl_query = {"orgid": {"$in": allowed_orgs}} 
-    
 
-         args[0] = {**query, **acl_query}
+         if query.get("itype") == "event":
+            allowed_orgs = self._get_acl_for_user(user_hash)
+            acl_query = {"orgid": {"$in": allowed_orgs}} 
+            args[0] = {**query, **acl_query}
 
-         print(args)
+         #print(args)
     
          result = func(self, *args, **kwargs)
          return result
