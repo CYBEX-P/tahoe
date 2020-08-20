@@ -40,6 +40,7 @@ setuptools.setup(
     ],
     install_requires = [
         "pymongo",
-        "mongomock"        
+        "mongomock",
+        "PyJWT"
     ]
 )
