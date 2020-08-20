@@ -26,12 +26,12 @@ import pdb
 if __name__ in ["__main__", "instance"]:
     from backend import Backend, NoBackend
     from misc import dtresolve, limitskip, branches, features, canonical
-    from parse import parse, ITYPE_CLASS_MAP
+    from parse import parse, getclass
     from error import DependencyError, BackendError
 else:
     from .backend import Backend, NoBackend
     from .misc import dtresolve, limitskip, branches, features, canonical
-    from .parse import parse, ITYPE_CLASS_MAP
+    from .parse import parse, getclass
     from .error import DependencyError, BackendError
   
 
@@ -139,7 +139,7 @@ class Instance():
     def json(self):
         return json.dumps(self.doc)
 
-    def related(self, itype='all', level=1, p=_P, start=0, end=None,
+    def related(self, itype='all', level=1, p=_P, start=0, end=0,
                 limit=0, skip=0, page=1):
 
         if not isinstance(level, int):
@@ -161,7 +161,7 @@ class Instance():
         related = [i for i in self._backend.find(q, p)]
         return related, page, page+1
         
-    def related_hash(self, level=0, visited=None, start=0, end=None,
+    def related_hash(self, level=0, visited=None, start=0, end=0,
                      limit=0, skip=0, page=1):
 
         if visited is None:
@@ -307,8 +307,13 @@ class OES(Instance):
             >>> r is None
             True
         """
+        b = self.__dict__.pop('_backend', None)
 
         old = copy.deepcopy(self)
+
+        if b:
+            old._backend = b
+            self._backend = b
 
         if add_data is None:
             add_data = []
@@ -392,7 +397,7 @@ class OES(Instance):
         return self._validate_instance(data, ['attribute', 'object'])
 
     def _validate_instance(self, instance, type_list):
-        type_list = [ITYPE_CLASS_MAP.get(t) for t in type_list]
+        type_list = [getclass(t) for t in type_list]
         
         if not isinstance(instance, list):
             instance = [instance]

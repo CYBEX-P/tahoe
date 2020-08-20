@@ -127,6 +127,7 @@ class Org(Identity):
 
 
 
+
     @property
     def _unique(self):
         unique = self.itype + self.sub_type + self.data['orgname'][0]
@@ -136,5 +137,9 @@ class Org(Identity):
     #     return False
     #     # TODO
 
-    # def isMember(self, user_id):
+    def _updatehash(self):
+##        newhash = sha256(self._unique)
+        return NotImplemented
+        # update its _hash in the MongoDB
+        # in all references (_ref, _cref, _usr_ref, _acl...)
 
