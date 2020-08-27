@@ -56,8 +56,14 @@ class DAM(MongoBackend):
       TypeError
          If `user` is not of type `tahoe.User`
       """
-      u = User("fake@example.com", _backend=NoBackend())
-      u._validate_instance(user, ['user']) # will raise TypeError if not User
+      # u = User("fake@example.com", _backend=NoBackend()) // produces empty name attrib, replaced with code below
+      # u._validate_instance(user, ['user']) # will raise TypeError if not User
+      try:
+         user._validate_instance(user, ['user']) # will raise TypeError if not User
+         h = user._hash
+      except:
+         raise TypeError
+
       h = user._hash
       return h
 
