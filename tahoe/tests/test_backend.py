@@ -21,18 +21,22 @@ class MongoBackendTest(unittest.TestCase):
     def setUpClass(cls):
         from pymongo import MongoClient
         from pymongo.errors import ConnectionFailure
+
         dbname = "1ef0534d-6ef7-4624-84c2-7bf59f1b3927"
+
         try:
-            raise ConnectionFailure  # debug delete me
+            raise ConnectionFailure
             client = MongoClient()
             client.admin.command('ismaster')
-            _backend = MongoBackend(dbname=dbname)
-            _backend.drop()
-            cls._backend = _backend
+            
+            cls._backend = MongoBackend(dbname=dbname)
+
         except ConnectionFailure:
-            _backend = MockMongoBackend(dbname=dbname)
-            cls._backend = _backend
-        return _backend
+            cls._backend = MongoBackend(dbname=dbname, mock=True)
+
+        cls._backend.drop()
+        
+        return cls._backend
 
     @classmethod
     def tearDownClass(cls):
@@ -40,12 +44,22 @@ class MongoBackendTest(unittest.TestCase):
         result = cls._backend.database.client.drop_database(dbname)
 
     def test01_repr(self):
-        self.assertEqual(repr(self._backend), "MongoBackend('localhost:27017'," + 
-            " '1ef0534d-6ef7-4624-84c2-7bf59f1b3927', 'instance')")
+        EQ = self.assertEqual
+        if self._backend.mock:
+            EQ(repr(self._backend), "MongoMockBackend('localhost:27017'," + 
+                " '1ef0534d-6ef7-4624-84c2-7bf59f1b3927', 'instance')")
+        else:
+            EQ(repr(self._backend), "MongoBackend('localhost:27017'," + 
+                " '1ef0534d-6ef7-4624-84c2-7bf59f1b3927', 'instance')")
 
     def test02_str(self):
-        self.assertEqual(str(self._backend), "MongoBackend('localhost:27017'," + 
-            " '1ef0534d-6ef7-4624-84c2-7bf59f1b3927', 'instance')")
+        EQ = self.assertEqual
+        if self._backend.mock:
+            EQ(str(self._backend), "MongoMockBackend('localhost:27017'," + 
+                " '1ef0534d-6ef7-4624-84c2-7bf59f1b3927', 'instance')")
+        else:
+            EQ(str(self._backend), "MongoBackend('localhost:27017'," + 
+                " '1ef0534d-6ef7-4624-84c2-7bf59f1b3927', 'instance')")
 
     def test03_find(self):
         rr = self._backend.find({})

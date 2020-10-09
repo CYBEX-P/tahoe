@@ -10,6 +10,7 @@ from .backend import Backend, NoBackend, MongoBackend
 from .event import Event
 from .object import Object
 from .raw import Raw
+from .report import Report
 from .session import Session
 from .tdql import TDQL
 

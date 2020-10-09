@@ -8,77 +8,93 @@ if __name__ != 'tahoe.report':
 import tahoe
 
 _LIM = 10000
+_P = {"_id": 0}
 
-class Report():
-    backend = get_backend() if os.getenv("_MONGO_URL") else NoBackend()
-    
-    def __init__(self, **kwargs):
-        if type(self.backend) == NoBackend and os.getenv("_MONGO_URL"):
-            self.backend = get_backend()
-        if 'backend' in kwargs:
-            self.backend = kwargs.get('backend') 
-        if not isinstance(self.backend, Backend):
-            raise TypeError('backend cannot be of type ' + str(type(self.backend)))
+class Report(tahoe.Instance):
+    def __init__(self, qtype, userid, timestamp, data,
+                 current_page=1, next_page=1, **kwargs):
 
-    def attributes(self, limit=1000, skip=0):
-        return self.backend.find({"itype":"attribute"}, limit=limit, skip=skip)
+        self.itype = 'report'
+        self.userid = userid
+        self.timestamp = timestamp
+        self.current_page = current_page
+        self.next_page = next_page
 
-    def attribute_types(self, count=True):
-        b = self.backend           
+        self.data = data
+
+        super().__init__(sub_type=qtype, **kwargs)
         
-        if not count: return sorted(b.distinct("sub_type", {"itype":"attribute"}))
-        
-        p = [{"$match":{"itype":"attribute"}},
-             {"$group":{"_id":"$sub_type", "count":{"$sum":1}}}]
-        r = b.aggregate(p)
-        return dict(sorted({i["_id"] : i["count"] for i in r}.items()))
 
-    def attribute_values(self, sub_type, count=False, start=None, end=None):
-        b = self.backend 
-        
-        q = {"itype":"attribute","sub_type":sub_type}
-        p = {"data":1, "uuid":1}
-        r = b.find(q, p)
-
-        if(start or end):
-            lv = [i["data"] for i in r]
-            d = {v : Attribute(sub_type, v).count(start, end) for v in lv }
-            d = {k:v for k,v in d.items() if v}
-            if not count: return sorted(d.keys())
-            else: return dict(sorted(d.items()))
-
-        else:
-            if not count: return sorted([i["data"] for i in r])
-
-            d = {}
-            for i in r:
-                q = {"itype":"event", "_ref":i["uuid"]}
-                d[i["data"]] = b.count_documents(q, limit=_LIM)
-            return dict(sorted(d.items()))
-
-    def event_features(self, limit, page_no):
-        events = self.events(limit, skip=page_no*limit)
-
-        d = {}
-        for e in events:
-            e = parse(e)
-            d[e.uuid] = e.features()
-        return d           
-    
-    def event_types(self, count=True):
-        b = self.backend
-        if not count: return sorted(b.distinct("sub_type", {"itype":"event"}))
-        
-        p = [{"$match":{"itype":"event"} },
-             {"$group":{"_id":"$sub_type", "count":{"$sum":1}}}]
-        r = b.aggregate(p)
-        return dict(sorted({i["_id"] : i["count"] for i in r}.items()))
-
-    def events(self, limit=100, skip=0):
-        return self.backend.find({"itype":"event"}, limit=limit, skip=skip)
-
-    def objects(self, limit=1000, skip=0):
-        return self.backend.find({"itype":"object"}, limit=limit, skip=skip)
+##class Report(tahoe.Object):
+##    backend = get_backend() if os.getenv("_MONGO_URL") else NoBackend()
+##    
+##    def __init__(self, **kwargs):
+##        if type(self.backend) == NoBackend and os.getenv("_MONGO_URL"):
+##            self.backend = get_backend()
+##        if 'backend' in kwargs:
+##            self.backend = kwargs.get('backend') 
+##        if not isinstance(self.backend, Backend):
+##            raise TypeError('backend cannot be of type ' + str(type(self.backend)))
+##
+##    def attributes(self, limit=1000, skip=0):
+##        return self.backend.find({"itype":"attribute"}, limit=limit, skip=skip)
+##
+##    def attribute_types(self, count=True):
+##        b = self.backend           
+##        
+##        if not count: return sorted(b.distinct("sub_type", {"itype":"attribute"}))
+##        
+##        p = [{"$match":{"itype":"attribute"}},
+##             {"$group":{"_id":"$sub_type", "count":{"$sum":1}}}]
+##        r = b.aggregate(p)
+##        return dict(sorted({i["_id"] : i["count"] for i in r}.items()))
+##
+##    def attribute_values(self, sub_type, count=False, start=None, end=None):
+##        b = self.backend 
+##        
+##        q = {"itype":"attribute","sub_type":sub_type}
+##        p = {"data":1, "uuid":1}
+##        r = b.find(q, p)
+##
+##        if(start or end):
+##            lv = [i["data"] for i in r]
+##            d = {v : Attribute(sub_type, v).count(start, end) for v in lv }
+##            d = {k:v for k,v in d.items() if v}
+##            if not count: return sorted(d.keys())
+##            else: return dict(sorted(d.items()))
+##
+##        else:
+##            if not count: return sorted([i["data"] for i in r])
+##
+##            d = {}
+##            for i in r:
+##                q = {"itype":"event", "_ref":i["uuid"]}
+##                d[i["data"]] = b.count_documents(q, limit=_LIM)
+##            return dict(sorted(d.items()))
+##
+##    def event_features(self, limit, page_no):
+##        events = self.events(limit, skip=page_no*limit)
+##
+##        d = {}
+##        for e in events:
+##            e = parse(e)
+##            d[e.uuid] = e.features()
+##        return d           
+##    
+##    def event_types(self, count=True):
+##        b = self.backend
+##        if not count: return sorted(b.distinct("sub_type", {"itype":"event"}))
+##        
+##        p = [{"$match":{"itype":"event"} },
+##             {"$group":{"_id":"$sub_type", "count":{"$sum":1}}}]
+##        r = b.aggregate(p)
+##        return dict(sorted({i["_id"] : i["count"] for i in r}.items()))
+##
+##    def events(self, limit=100, skip=0):
+##        return self.backend.find({"itype":"event"}, limit=limit, skip=skip)
+##
+##    def objects(self, limit=1000, skip=0):
+##        return self.backend.find({"itype":"object"}, limit=limit, skip=skip)
 
     
 

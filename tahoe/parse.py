@@ -2,7 +2,8 @@
 ITYPE_CLASS_MAP = {}
 
 def parse(instance, backend, validate=True):
-    if isinstance(instance, str): instance = json.loads(instance)
+    if isinstance(instance, str):
+        instance = json.loads(instance)
     instance.pop("_id", None)
     t = ITYPE_CLASS_MAP['attribute']['default']('mock', 'mock')
     t.__dict__ = instance
@@ -10,6 +11,10 @@ def parse(instance, backend, validate=True):
     itype = instance['itype']
     sub_type = instance['sub_type']
     t.__class__ = getclass(itype, sub_type)
+
+    if t._backend != backend:
+        t._backend = backend
+        
 ##    if validate: t.validate()
     return t
 

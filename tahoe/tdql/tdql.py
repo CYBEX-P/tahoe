@@ -1,5 +1,8 @@
 """TAHOE TDQL class."""
 
+import hashlib
+import pdb
+
 if __name__ != 'tahoe.identity.identity':
     import sys, os
     sys.path = ['..', os.path.join('..', '..')] + sys.path
@@ -45,7 +48,8 @@ class TDQL(Object):
         insignificant. _cref is a subset of _ref.
     """
   
-    def __init__(self, data, userid, timestamp, encrypted=True, **kwargs):
+    def __init__(self, qtype, qdata, qhash, userid, timestamp,
+                 encrypted=True, **kwargs):
         """
         Parameters
         ----------         
@@ -87,7 +91,9 @@ class TDQL(Object):
             backend like `Instance._backend = backend`.
         """
 
-        adata = Attribute('data', data, _backend=self._backend)
+        aqtype = Attribute('qtype', qtype, _backend=self._backend)
+        aqhash = Attribute('qhash', qhash, _backend=self._backend)        
+        aqdata = Attribute('qdata', qdata, _backend=self._backend)
         auserid = Attribute('userid', userid, _backend=self._backend)
         atimestamp = Attribute('timestamp', timestamp, _backend=self._backend)
         aencrypted = Attribute('encrypted', encrypted, _backend=self._backend)
@@ -104,18 +110,80 @@ class TDQL(Object):
         osocket = Object('socket', [ahost, aport, anonce],
                          _backend=self._backend)
 
-
-        data = [adata, auserid, atimestamp, aencrypted, astatus,
-                areport_id, osocket]
+        data = [aqtype, aqhash, aqdata, auserid, atimestamp,
+                aencrypted, astatus, areport_id, osocket]
         super().__init__('query', data, **kwargs)
 
+    @property
+    def status(self):
+        return self.data['status'][0]
 
+    @status.setter
+    def status(self, status):
+        """
+        Set status of this query.
+
+        Parameters
+        ----------
+        status : {"wait", "processing", "ready", "failed"}            
+        """
+        
+        if status not in ('wait', 'processing', 'ready', 'failed'):
+            raise ValueError(f"status: {status}")
+
+        a_new_status = Attribute('status', status, _backend=self._backend)
+        a_old_status = Attribute('status', self.status, _backend=self._backend)
+        
+        if a_new_status._hash != a_old_status._hash:
+            self.replace_instance(a_old_status, a_new_status)
+
+    @property
+    def qdata(self):
+        return self.data['qdata'][0]
+
+    @property
+    def qhash(self):
+        return self.data['qhash'][0]
+    
+    @property
+    def qtype(self):
+        return self.data['qtype'][0]
+
+    @property
+    def report_id(self):
+        return self.data['report_id'][0]
+
+    @report_id.setter
+    def report_id(self, report_id):
+        """
+        Set report_id of this query.
+
+        Parameters
+        ----------
+        report_id : _hash of report           
+        """
+
+        a_new_report_id = Attribute('report_id', report_id,
+                                    _backend=self._backend)
+        a_old_report_id = Attribute('report_id', self.report_id,
+                                    _backend=self._backend)
+
+        if a_new_report_id._hash != a_old_report_id._hash:
+            self.replace_instance(a_old_report_id, a_new_report_id)
+
+    @property
+    def timestamp(self):
+        return self.data['timestamp'][0]
+    
+    @property
+    def userid(self):
+        return self.data['userid'][0]
+    
     @property
     def _unique(self):
         userid = self.data['userid'][0]
         timestamp = self.data['timestamp'][0]
-        query_data = self.data['data'][0]
-        unique = self.itype + self.sub_type + query_data + \
+        unique = self.itype + self.sub_type + self.qhash + \
                  userid +  str(int(timestamp)//60//60)
         return unique.encode('utf-8')
 
@@ -157,25 +225,25 @@ class TDQL(Object):
         if o_new_socket._hash != o_old_socket._hash:
             self.replace_instance(o_old_socket, o_new_socket)
 
-    def setstatus(self, status):
-        """
-        Set status of this query.
-
-        Parameters
-        ----------
-        status : {"wait", "processing", "ready"}            
-        """
-        
-        if status not in ('wait', 'processing', 'ready'):
-            raise ValueError(f"status: {status}")
-
-        a_new_status = Attribute('status', status, _backend=self._backend)
-        
-        old_status = self.data['status'][0]
-        a_old_status = Attribute('status', old_status, _backend=self._backend)
-
-        if a_new_status._hash != a_old_status._hash:
-            self.replace_instance(a_old_status, a_new_status)
+##    def setstatus(self, status):
+##        """
+##        Set status of this query.
+##
+##        Parameters
+##        ----------
+##        status : {"wait", "processing", "ready"}            
+##        """
+##        
+##        if status not in ('wait', 'processing', 'ready'):
+##            raise ValueError(f"status: {status}")
+##
+##        a_new_status = Attribute('status', status, _backend=self._backend)
+##        
+##        old_status = self.data['status'][0]
+##        a_old_status = Attribute('status', old_status, _backend=self._backend)
+##
+##        if a_new_status._hash != a_old_status._hash:
+##            self.replace_instance(a_old_status, a_new_status)
 
 
 

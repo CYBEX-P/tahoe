@@ -176,7 +176,7 @@ class Instance():
 
         all_rel_hash = set()
 
-        p = {**_P, "itype": 1, "_hash": 1, "_ref": 1}
+        p = {**_P, "itype": 1, "sub_type": 1, "_hash": 1, "_ref": 1}
         r = self.events(p, start, end, limit, skip, page)
         
         for e in r:
