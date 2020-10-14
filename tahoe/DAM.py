@@ -161,28 +161,32 @@ class DAM(MongoBackend):
          TypeError
             If `user` is not tahoe.User._hash or of type tahoe.User
          """
-         args = list(args) # conver tuple to list, make editable
-
-         if isinstance(user, str):
-            user_hash = user
-         else:
-            user_hash = self._user_to_hash(user)
-    
-
          query = args[0] # make it editable
 
-         if 'orgid' in query: # orgid
-            print(query)
-            raise ImpossibleError
-
+         print("Q type:", query.get("itype"))
          if query.get("itype") == "event":
+            args = list(args) # convert tuple to list, make editable
+
+            if isinstance(user, str):
+               user_hash = user
+            else:
+               user_hash = self._user_to_hash(user)
+                     
+            if 'orgid' in query: # orgid
+               print(query)
+               raise ImpossibleError
+
             allowed_orgs = self._get_acl_for_user(user_hash)
+            print(allowed_orgs)
             acl_query = {"orgid": {"$in": allowed_orgs}} 
             args[0] = {**query, **acl_query}
+         else:
+            print("passthrough mode")
 
          #print(args)
     
          result = func(self, *args, **kwargs)
+         # print([t for t in result])
          return result
 
       return wrapper

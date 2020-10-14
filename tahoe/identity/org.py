@@ -5,24 +5,30 @@ if __name__ != 'tahoe.identity.org':
     sys.path = ['..', os.path.join('..', '..')] + sys.path
     del sys, os
 
-from tahoe import Attribute, Object
+from tahoe import Attribute, Object, parse
 from tahoe.identity.error import UserError
 from tahoe.identity.identity import Identity
 
 
 class Org(Identity):
     def __init__(self, orgname, user, admin, name='', **kwargs):
-        user = self._validate_instance(user, ['user'])
-        admin = self._validate_instance(admin, ['user'])
-        
+        # user = self._validate_instance(user, ['user'])
+        # admin = self._validate_instance(admin, ['user'])
+        if not (isinstance(user,list) and isinstance(admin,list)):
+            raise TypeError
 
-
+        user_obj = list()
+        admin_obj = list()
+        # print(user, admin)
         self._usr_ref = list()
         for u in user:
+            # print(type(u))
             if isinstance(u,str):
                 user_hash = u
+                user_obj.append(parse(self._backend.find_one({"_hash":u},{"_id":0}),self._backend))
             elif self._validate_instance(u, ["user"]):
                 user_hash = u._hash
+                user_obj.append(u)
             else:
                 raise TypeError
             self._usr_ref.append(user_hash)
@@ -31,8 +37,10 @@ class Org(Identity):
         for ad in admin:
             if isinstance(ad,str):
                 admin_hash = ad
+                admin_obj.append(parse(self._backend.find_one({"_hash":ad},{"_id":0}),self._backend))
             elif self._validate_instance(ad, ["user"]):
                 admin_hash = ad._hash
+                admin_obj.append(ad)
             else:
                 raise TypeError
             self._adm_ref.append(admin_hash)
@@ -45,20 +53,20 @@ class Org(Identity):
                                 f"'{u.data['useremail'][0]}'")
 
         # default ACL
-        self._acl = self._adm_ref + self._usr_ref
+        self._acl = list(set(self._adm_ref + self._usr_ref))
           
         orgname = Attribute('orgname', orgname, _backend=self._backend)
         name = Attribute('name', name, _backend=self._backend)
 
-        admin = Object('admin', admin, _backend=self._backend)
+        admin_obj = Object('admin', admin_obj, _backend=self._backend)
 
-        super().__init__('cybexp_org', [orgname, name, *user, admin], **kwargs)
+        super().__init__('cybexp_org', [orgname, name, *user_obj, admin_obj], **kwargs)
 
 
     @property
     def acl(self):
         return self._acl
-    @acl.setter
+    # @acl.setter # this decorator breaks it 
     def set_acl(self,admin, acl):
         """
         Parameters
@@ -77,12 +85,15 @@ class Org(Identity):
             if `admin` is not of type `User` or string
         """
 
+        print("admin", admin)
         if isinstance(admin,str):
             admin_hash = admin
         elif self._validate_instance(admin, ["user"]):
             admin_hash = admin._hash
         else:
             raise TypeError
+
+        print("admin is fine")
 
 
         if admin_hash in self._adm_ref:

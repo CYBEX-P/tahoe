@@ -84,7 +84,8 @@ class IdentityBackend(tahoe.MongoBackend):
             MongoDB projection
         """
 
-        thisorg = tahoe.identity.Org(orgname, _backend=tahoe.NoBackend())
+        fake_user = tahoe.identity.User("fake_user",_backend=tahoe.NoBackend() )
+        thisorg = tahoe.identity.Org(orgname, [fake_user],[fake_user], _backend=tahoe.NoBackend())
         return self.find_one({"_hash": thisorg._hash}, p) 
 
     def user_exists(self, email):
