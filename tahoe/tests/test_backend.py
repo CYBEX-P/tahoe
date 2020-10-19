@@ -32,7 +32,7 @@ class MongoBackendTest(unittest.TestCase):
             cls._backend = MongoBackend(dbname=dbname)
 
         except ConnectionFailure:
-            cls._backend = MongoBackend(dbname=dbname, mock=True)
+            cls._backend = MockMongoBackend(dbname=dbname)
 
         cls._backend.drop()
         
@@ -46,7 +46,7 @@ class MongoBackendTest(unittest.TestCase):
     def test01_repr(self):
         EQ = self.assertEqual
         if self._backend.mock:
-            EQ(repr(self._backend), "MongoMockBackend('localhost:27017'," + 
+            EQ(repr(self._backend), "MongoBackend('localhost:27017'," + 
                 " '1ef0534d-6ef7-4624-84c2-7bf59f1b3927', 'instance')")
         else:
             EQ(repr(self._backend), "MongoBackend('localhost:27017'," + 
@@ -55,7 +55,7 @@ class MongoBackendTest(unittest.TestCase):
     def test02_str(self):
         EQ = self.assertEqual
         if self._backend.mock:
-            EQ(str(self._backend), "MongoMockBackend('localhost:27017'," + 
+            EQ(str(self._backend), "MongoBackend('localhost:27017'," + 
                 " '1ef0534d-6ef7-4624-84c2-7bf59f1b3927', 'instance')")
         else:
             EQ(str(self._backend), "MongoBackend('localhost:27017'," + 

@@ -6,8 +6,10 @@ if __name__ != 'tahoe.tests.test_tdql':
     del sys
 
 import builtins
+import hashlib
 import pdb
 import unittest
+
 
 from tahoe import Instance, Attribute, Object, TDQL
 from tahoe.backend import MongoBackend, MockMongoBackend
@@ -40,8 +42,12 @@ def make_test_data():
             '88cc87250967cf3b52894d11'''
     builtins.timestamp = -1
     builtins.encrypted = False
+    builtins.qtype = "count"
+    builtins.qdata = canon_data
+    builtins.qhash = hashlib.sha256(canon_data.encode()).hexdigest()
 
-    builtins.q = TDQL(canon_data, userid, timestamp, encrypted)
+
+    builtins.q = TDQL(qtype, qdata, qhash, userid, timestamp, encrypted)
     builtins.q_d = q._backend.find_one({'_hash': q._hash})
 
 class AllTest(unittest.TestCase):
@@ -57,8 +63,7 @@ class AllTest(unittest.TestCase):
 
         self.assertIsNotNone(q_d)
 
-        q_hash_expected = '6e5eeb4a8cb368569045b7387e4197c0433a1c2bc' \
-                          '1242943a2bd4bc909c36ee6'
+        q_hash_expected = '517321fabe4a60e7d1efca8379c3653e0274e68f659530b3230d21ee485defec'
 
         self.assertEqual(q.itype, 'object')
         self.assertEqual(q_d['itype'], 'object')
@@ -66,8 +71,8 @@ class AllTest(unittest.TestCase):
         self.assertEqual(q.sub_type, 'query')
         self.assertEqual(q_d['sub_type'], 'query')
 
-        self.assertEqual(q.data['data'][0], canon_data)
-        self.assertEqual(q_d['data']['data'][0], canon_data)
+        self.assertEqual(q.data['qdata'][0], canon_data)
+        self.assertEqual(q_d['data']['qdata'][0], canon_data)
         
         self.assertEqual(q.data['userid'][0], userid)
         self.assertEqual(q_d['data']['userid'][0], userid)
@@ -100,13 +105,13 @@ class AllTest(unittest.TestCase):
         EQ(q.data['status'][0], 'invalid')
         EQ(q_d['data']['status'][0], 'invalid')
 
-        q.setstatus('ready')
+        q.status = 'ready'
         builtins.q_d = q._backend.find_one({'_hash': q._hash})
 
         EQ(q.data['status'][0], 'ready')
         EQ(q_d['data']['status'][0], 'ready')
 
-        self.assertRaises(ValueError, q.setstatus, 'anything')
+        self.assertRaises(ValueError, setattr, q, "status", 'anything')
 
     def test_03_setsocket(self):
         TDQL._backend.drop()

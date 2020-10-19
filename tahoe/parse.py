@@ -1,5 +1,5 @@
 
-ITYPE_CLASS_MAP = {}
+ITYPE_CLASS_MAP = {'str': {'default':str}}
 
 def parse(instance, backend, validate=True):
     if isinstance(instance, str):
@@ -25,7 +25,8 @@ def _create_itype_class_map():
     from .raw import Raw
     from .session import Session
     from .tdql import TDQL
-    from .identity import Org, User
+    from .identity.org import Org
+    from .identity.user import User
     
 
     ITYPE_CLASS_MAP['attribute'] = {'default': Attribute}

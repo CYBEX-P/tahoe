@@ -9,6 +9,8 @@ import os
 import pdb
 
 import pymongo
+from pymongo import MongoClient
+from pymongo.collection import Collection
 import mongomock
 
 
@@ -74,76 +76,76 @@ class NoBackend(Backend):
         return None
 
 
-class MongoBackend(pymongo.collection.Collection,
-                   mongomock.collection.Collection, Backend):
-    """
-    Inherits methods from pymongo.collection.Collection.
-    """
+# class MongoBackend(pymongo.collection.Collection,
+#                    mongomock.collection.Collection, Backend):
+#     """
+#     Inherits methods from pymongo.collection.Collection.
+#     """
     
-    def __init__(self, mongo_url=None, dbname="tahoe_db",
-                 collname="instance", create=False, mock=False, **kwargs):
+#     def __init__(self, mongo_url=None, dbname="tahoe_db",
+#                  collname="instance", create=False, mock=False, **kwargs):
 
-        self.mock = mock
+#         self.mock = mock
         
-        if self.mock:
-            client = mongomock.MongoClient(mongo_url, connect=False)
-            db = client.get_database(dbname)
-            pdb.set_trace()
-            mongomock.collection.Collection.__init__(
-                self, db, collname, db._store)
-        else:
-            client = pymongo.MongoClient(mongo_url, connect=False)
-            db = client.get_database(dbname)
-            pymongo.collection.Collection.__init__(
-                self, db, collname,  create, **kwargs)
-        Backend.__init__(self)
+#         if self.mock:
+#             client = mongomock.MongoClient(mongo_url, connect=False)
+#             db = client.get_database(dbname)
+#             # pdb.set_trace()
+#             mongomock.collection.Collection.__init__(
+#                 self, db, collname, db._store)
+#         else:
+#             client = pymongo.MongoClient(mongo_url, connect=False)
+#             db = client.get_database(dbname)
+#             pymongo.collection.Collection.__init__(
+#                 self, db, collname,  create, **kwargs)
+#         Backend.__init__(self)
 
-    def __repr__(self):
-        if self.mock:
-            class_name = "MongoMockBackend"
-        else:
-            class_name = "MongoBackend"
-        host, port = self.database.client.address
-        dbname = self.database.name
-        collname = self.name
+#     def __repr__(self):
+#         if self.mock:
+#             class_name = "MongoMockBackend"
+#         else:
+#             class_name = "MongoBackend"
+#         host, port = self.database.client.address
+#         dbname = self.database.name
+#         collname = self.name
         
-        return f"{class_name}('{host}:{port}', '{dbname}', '{collname}')"
+#         return f"{class_name}('{host}:{port}', '{dbname}', '{collname}')"
 
 
 
 
     
 
-##class MongoBackend(Collection, Backend):
-##    """Inherits everything from pymongo.collection.Collection."""
-##    
-##    def __init__(self, mongo_url=None, dbname="tahoe_db",
-##                 collname="instance", create=False, **kwargs):
-##        client = MongoClient(mongo_url, connect=False)
-##        db = client.get_database(dbname)
-##        Backend.__init__(self)
-##        Collection.__init__(self, db, collname,  create, **kwargs)
-##
-##    def __repr__(self):
-##        host, port = self.database.client.address
-##        dbname = self.database.name
-##        collname = self.name
-##        return f"MongoBackend('{host}:{port}', '{dbname}', '{collname}')"
-##
-##
-##class MockMongoBackend(mongomock.Collection, Backend):
-##    def __init__(self, mongo_url=None, dbname="tahoe_db",
-##                 collname="instance", create=False, **kwargs):
-##        client = mongomock.MongoClient(mongo_url)
-##        db = client.get_database(dbname)
-##        Backend.__init__(self)
-##        mongomock.Collection.__init__(self, db, collname, db._store)
-##
-##    def __repr__(self):
-##        host, port = self.database.client.address
-##        dbname = self.database.name
-##        collname = self.name
-##        return f"MongoBackend('{host}:{port}', '{dbname}', '{collname}')"
+class MongoBackend(pymongo.collection.Collection, Backend):
+   """Inherits everything from pymongo.collection.Collection."""
+   
+   def __init__(self, mongo_url=None, dbname="tahoe_db",
+                collname="instance", create=False, **kwargs):
+       client = MongoClient(mongo_url, connect=False)
+       db = client.get_database(dbname)
+       Backend.__init__(self)
+       Collection.__init__(self, db, collname,  create, **kwargs)
+
+   def __repr__(self):
+       host, port = self.database.client.address
+       dbname = self.database.name
+       collname = self.name
+       return f"MongoBackend('{host}:{port}', '{dbname}', '{collname}')"
+
+
+class MockMongoBackend(mongomock.Collection, Backend):
+   def __init__(self, mongo_url=None, dbname="tahoe_db",
+                collname="instance", create=False, **kwargs):
+       client = mongomock.MongoClient(mongo_url)
+       db = client.get_database(dbname)
+       Backend.__init__(self)
+       mongomock.Collection.__init__(self, db, collname, db._store)
+
+   def __repr__(self):
+       host, port = self.database.client.address
+       dbname = self.database.name
+       collname = self.name
+       return f"MongoBackend('{host}:{port}', '{dbname}', '{collname}')"
 
 
 

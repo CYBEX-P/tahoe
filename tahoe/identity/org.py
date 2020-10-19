@@ -14,8 +14,10 @@ class Org(Identity):
     def __init__(self, orgname, user, admin, name='', **kwargs):
         # user = self._validate_instance(user, ['user'])
         # admin = self._validate_instance(admin, ['user'])
-        if not (isinstance(user,list) and isinstance(admin,list)):
-            raise TypeError
+
+        user = self._validate_instance(user, ["user", "str"])
+        admin = self._validate_instance(admin, ["user", "str"])
+
 
         user_obj = list()
         admin_obj = list()
