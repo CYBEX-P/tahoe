@@ -175,6 +175,22 @@ class InitTest(unittest.TestCase):
         IN(u1._hash, o._adm_ref)
         IN(u1._hash, od['_adm_ref'])
 
+    def test_acl(self):
+        EQ = self.assertEqual
+        IN = self.assertIn
+        NIN = self.assertNotIn
+
+        EQ(len(o._acl), 1)
+        EQ(len(od['_acl']), 1)
+
+        IN(u1._hash, o._acl)
+        NIN(u2._hash, o._acl)
+        NIN(u3._hash, o._acl)
+
+        IN(u1._hash, od['_acl'])
+        NIN(u2._hash, od['_acl'])
+        NIN(u3._hash, od['_acl'])
+
     def test_hash(self):
         expected_hash = 'b92cd7e4702ec0691f9975fb3dd552a46a3' \
                         'e4dfb25726b258870133425b48373'

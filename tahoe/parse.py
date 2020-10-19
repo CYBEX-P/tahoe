@@ -32,6 +32,9 @@ def _create_itype_class_map():
     ITYPE_CLASS_MAP['event'] = {'default': Event}
     ITYPE_CLASS_MAP['object'] = {'default': Object}
     ITYPE_CLASS_MAP['object']['query'] = TDQL
+
+    ITYPE_CLASS_MAP['object']['cybexp_user'] = User
+    ITYPE_CLASS_MAP['object']['cybexp_org'] = Org
     
     ITYPE_CLASS_MAP['org'] = {'default': Org}
     ITYPE_CLASS_MAP['raw'] = {'default': Raw}
