@@ -132,8 +132,14 @@ class MockIdentityBackend(tahoe.backend.MockMongoBackend):
        return self.find_one({"_hash": thisorg._hash}, p) 
 
    def user_exists(self, email):
+       """
+       Utility function, pulls and return a bool where the email is existant or not
+       """
        return self.find_user(email, {**P, "_hash":1}) is not None
 
    def org_exists(self, orgname):
+       """
+       Utility function, pulls and returns a bool where the organization name is existant or not
+       """
        return self.find_org(orgname, {**P, "_hash":1}) is not None
 

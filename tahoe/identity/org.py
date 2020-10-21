@@ -11,6 +11,9 @@ from tahoe.identity.identity import Identity
 
 
 class Org(Identity):
+    """
+    
+    """
     def __init__(self, orgname, user, admin, name='', **kwargs):
         # user = self._validate_instance(user, ['user'])
         # admin = self._validate_instance(admin, ['user'])

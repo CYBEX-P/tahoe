@@ -202,6 +202,8 @@ class Instance():
 
     def _update(self, update):
         """
+    
+
         Warning
         -------
         Does not update `_hash` or `_ref`.
@@ -369,6 +371,12 @@ class OES(Instance):
         """
         Note, data is a list of Attribute, Object; whereas prev_data
         is a dict (json object). add_instance() uses prev_data.
+
+        Parameters
+        ----------
+        data: list of attributes or object
+            
+
         """
         
         d = defaultdict(list)
@@ -397,6 +405,33 @@ class OES(Instance):
         return self._validate_instance(data, ['attribute', 'object'])
 
     def _validate_instance(self, instance, type_list):
+        """
+        Ensures the the passed instance is valid by ensuring that the passed variables within 'instance'
+        are of the type they are by comparing them to the type_list.
+
+        Parameters
+        ----------
+        instance: a dictionary of string values
+            the key value of this function. Items in here will be tested for correct datatype corresponding
+            to type_list.
+        type_list: list of strings
+            the variable names and their corresponding datatypes that will be used to ensure the datatype
+            of the values in instance are correct.
+
+        Raises
+        ------
+        ValueError:
+            'instance' is empty
+        TypeError:
+            the current iteration of data in 'instance' is either not of type tahoe or not a type 
+            that is in the passed type_list.
+        
+        Returns
+        -------
+        instance: List 
+            set list of the instance object 
+
+        """
         type_list = [getclass(t) for t in type_list]
         
         if not isinstance(instance, list):
