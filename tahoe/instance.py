@@ -103,6 +103,10 @@ class Instance():
     # Public methods
 
     def delete(self):
+        """
+        Finds the corresponding Hash reference and deletes. If the the reference also has associated attributes,
+        find any possible related attribtues and delete.
+        """
         r = self._backend.find_one({'_ref': self._hash}, {**_P, '_hash': 1})
         if r:
             raise DependencyError(f"referred in {r['_hash']}")
@@ -141,6 +145,33 @@ class Instance():
 
     def related(self, itype='all', level=1, p=_P, start=0, end=0,
                 limit=0, skip=0, page=1):
+        """
+        Pulls all the attributes and objects connected to the event. All retrieves
+        other events that are connected to it through a common session. If the function
+        is called for an attribute, object, or session, this function retrieves all the
+        events connect to it.
+
+        Parameters
+        ----------
+        itype: string
+            the itype of the Tahoe instance used to call this function
+            Default: 'all'
+        level: int
+
+        p: tuple
+            the projection of the database query
+            Default: '_P' or whatever is the default id
+        start: int
+
+        end: int
+
+        limit: int
+
+        skip: int
+
+        page: int
+
+        """
 
         if not isinstance(level, int):
             raise TypeError(f"level = {type(level)}")
@@ -163,6 +194,10 @@ class Instance():
         
     def related_hash(self, level=0, visited=None, start=0, end=0,
                      limit=0, skip=0, page=1):
+        """
+        Retrieves and returns all the related hashes corresponding to the object that was called in the
+        the 'retrieve' function.
+        """
 
         if visited is None:
             visited = set()
@@ -202,7 +237,13 @@ class Instance():
 
     def _update(self, update):
         """
-    
+        
+        Updates the instance object with a new backend location.
+
+        Parameters
+        ----------
+        update: string
+            location of the backend instance. e.g: 'mongodb://localhost'
 
         Warning
         -------
@@ -220,6 +261,9 @@ class Instance():
     # Methods to validate common function parameters
 
     def _validate_param(self, **kwargs):
+        """
+        Asserts that the items of the arguments passed are of the correct datatype.
+        """
         for k, v in kwargs.items():
             if k == '_backend':
                 if not isinstance(v, Backend):
@@ -372,10 +416,22 @@ class OES(Instance):
         Note, data is a list of Attribute, Object; whereas prev_data
         is a dict (json object). add_instance() uses prev_data.
 
+        Utility function to pull the data from that was used to initialize an OES object. Creates a default dictionary 
+        in list format to hold sub_types and their corresponding data.  'data' is then iterated through and its values
+        are pulled and stored in the default dictionary. When finished with 'data', that dictionary with the pulled 
+        data values is then returned to the objects 'self.data' variable.
+
         Parameters
         ----------
         data: list of attributes or object
+            contains the data sets for a Tahoe object, event, or session
+        prev_data: dict json object
+            the previous data set before the set of data that is going to be appended
             
+        Returns
+        -------
+        d: dictionary
+            dictionary containing the data pulled from 'data'. The sub_types and their data.    
 
         """
         
