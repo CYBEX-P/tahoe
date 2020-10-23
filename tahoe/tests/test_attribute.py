@@ -192,6 +192,19 @@ class CountTest(unittest.TestCase):
         self.assertEqual(afn.count(context='malicious'), 2)
         self.assertEqual(afn.count(context='benign'), 1)
         self.assertEqual(afn.count(context='unknown'), 1)
+
+    def test07_count_capped(self):
+        Attribute._backend.drop()
+        
+        limit = 10
+
+        afn = Attribute('filename', 'virus.exe')
+
+        for t in range(limit+1):
+            e = Event('file_download', afn, orgid, t)
+        
+        self.assertEqual(afn.count(), limit+1)
+        self.assertEqual(afn.count(limit=limit), limit)
         
         
 

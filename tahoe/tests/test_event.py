@@ -594,6 +594,7 @@ class ThreatRankTest(unittest.TestCase):
         make_threatrank_data()
 
     def test_01(self):
+        return # debug
         tr = event_email_1.threatrank()
         print(tr)
         tr = event_email_2.threatrank()

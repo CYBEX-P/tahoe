@@ -22,6 +22,7 @@ _P = {'_id': 0}
 
 
 
+
 class Attribute(tahoe.Instance):
     """
     An attribute holds a single piece of information, like an URL.
@@ -99,7 +100,6 @@ class Attribute(tahoe.Instance):
         
     The behavior is undefined.
     """
-
         
     def __init__(self, sub_type, data, **kwargs):
         """
@@ -141,7 +141,7 @@ class Attribute(tahoe.Instance):
 
     # Public methods in alphabetical order    
         
-    def count(self, start=0, end=0, category='all', context='all'):
+    def count(self, start=0, end=0, category='all', context='all', limit=None):
         """
         Count the number of events where this attribute is seen.
 
@@ -157,6 +157,9 @@ class Attribute(tahoe.Instance):
         context: {"all", "benign", "malicious"}, default="all"
             If "malicious", count events where this attribute was seen
             in a malicious context.
+        limit: int, default=None
+            Cap the count. Stop counting at limit. If None, exact count
+            is returned.
 
         Returns
         -------
@@ -179,8 +182,12 @@ class Attribute(tahoe.Instance):
         if context == 'unknown':
             q['_ben_ref'] = {'$ne': self._hash}
             q['_mal_ref'] = {'$ne': self._hash}
+
+        kwargs = {}
+        if limit:
+            kwargs['limit'] = limit
         
-        return self._backend.count_documents(q)
+        return self._backend.count_documents(q, **kwargs)
 
     def degree(self, itype='all'):
         q = {'_ref': self._hash}
