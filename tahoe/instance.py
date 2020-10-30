@@ -419,7 +419,7 @@ class OES(Instance):
         Utility function to pull the data from that was used to initialize an OES object. Creates a default dictionary 
         in list format to hold sub_types and their corresponding data.  'data' is then iterated through and its values
         are pulled and stored in the default dictionary. When finished with 'data', that dictionary with the pulled 
-        data values is then returned to the objects 'self.data' variable.
+        data values is then returned.
 
         Parameters
         ----------

@@ -16,7 +16,11 @@ P = {"_id":0}
 class IdentityBackend(tahoe.MongoBackend):
     """
     IdentityBackend stores user, org and input-config data and has
-    special methods to manage them.
+    special methods to manage them. IdentityBackend is also the base
+    for other classes in Tahoe when dealing with the location of the 
+    backend. Each iteration of this class requires a source in which 
+    the data will be sent towards. In local host case -
+    E.G: "mongodb://localhost:27017/"
     """
 
     def __init__(self, mongo_url=None, dbname="identity_db",
@@ -27,6 +31,26 @@ class IdentityBackend(tahoe.MongoBackend):
         return NotImplemented
 
     def get_config(self, plugin_lst=None, name_lst=None, enabled=True):
+        """
+
+        Gets and and establishes the backend configuration with plugin_lst and adds
+        the values of the name_lst parameter as well. If either or both parameters is not 'None',
+        their values are pulled from them and stored in a list as a tahoe.Attribute hashmap as either
+        a plugin or name attribute object. The function then looks for the id of the backend and 
+        returns the object as a list.
+        
+        Parameters
+        ----------
+        plugin_lst: List of Str
+          The list of plugins 
+        name_lst: list of Str
+          List of the names of the passed files that contain the information and
+          other data
+        enabled: Bool
+          Enables a Tahoe Attribute
+
+
+        """
         ae = tahoe.Attribute('enabled', enabled)
         
         q = {'sub_type': 'cybexp_input_config', '_cref': {'$eq': ae._hash}}
@@ -50,6 +74,15 @@ class IdentityBackend(tahoe.MongoBackend):
         return list(r)
 
     def get_all_plugin(self, enabled=True):
+        """
+        Input config utility function. Finds and returns all available
+        plugins from the database.
+
+        Parameters
+        ----------
+        enabled: Bool
+        
+        """
         ae = tahoe.Attribute('enabled', enabled)
         q = {'sub_type': 'cybexp_input_config', '_cref': ae._hash}
         p = {'_id': 0, 'data.plugin': 1}
