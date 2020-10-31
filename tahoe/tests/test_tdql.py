@@ -136,6 +136,11 @@ class AllTest(unittest.TestCase):
         EQ(q_d['data']['socket'][0]['port'][0], 100)
         EQ(q.data['socket'][0]['nonce'][0], 'abcdefgh')
         EQ(q_d['data']['socket'][0]['nonce'][0], 'abcdefgh')
+
+    def test_04_unique(self):
+        """Ensure _hash is different for related and count."""
+        pass
+    
         
        
 

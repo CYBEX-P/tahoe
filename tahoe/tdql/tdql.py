@@ -183,8 +183,8 @@ class TDQL(Object):
     def _unique(self):
         userid = self.data['userid'][0]
         timestamp = self.data['timestamp'][0]
-        unique = self.itype + self.sub_type + self.qtype + self.qhash + \
-                 userid +  str(int(timestamp)//60//60) 
+        unique = self.itype + self.sub_type + self.qhash + \
+                 userid +  str(int(timestamp)//60//60)
         return unique.encode('utf-8')
 
     def setsocket(self, host, port, nonce):

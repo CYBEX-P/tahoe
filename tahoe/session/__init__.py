@@ -14,6 +14,9 @@ import tahoe
 
 # === Global Variables ===
 
+dtresolve = tahoe.misc.dtresolve
+limitskip = tahoe.misc.limitskip
+
 _P = {'_id': 0}
 """Default projection for MongoDB queries"""
 
@@ -200,7 +203,7 @@ class Session(tahoe.OES):
             Iterable of events of this session.
         """
 
-        self._valdiate_param(start=start, end=end,
+        self._validate_param(start=start, end=end,
                              limit=limit, skip=skip, page=page)
         
         q = {"itype": "event", "_hash": {"$in": self._ref},

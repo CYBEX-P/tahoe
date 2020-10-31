@@ -8,7 +8,7 @@ if __name__ != 'tahoe.tests.test_attribute':
 import pdb
 import unittest
 
-from tahoe import Instance, Attribute, Event
+from tahoe import Instance, Attribute, Event, Session
 from tahoe.backend import MongoBackend, MockMongoBackend
 from tahoe.tests.test_backend import MongoBackendTest
 
@@ -272,8 +272,133 @@ class DeleteTest(unittest.TestCase):
         self.assertIsNone(r)
         
 
+def make_related_data():
+    import builtins as b
+    
+    b.a11 = Attribute('ipv4', '1.1')
+    b.a12 = Attribute('ipv4', '1.2')
+    b.e1 = Event('lvl_1', [a11,a12], orgid, 100)
 
+    b.a21 = Attribute('ipv4', '2.1')
+    b.e2 = Event('lvl_2', [a21], orgid, 200)
 
+    b.s1 = Session('lvl_2')
+    s1.add_event([e1,e2])
+
+def make_related_data_2():
+    make_related_data()
+
+    import builtins as b
+    
+    b.a31 = Attribute('ipv4', '3.1')
+    b.e3 = Event('lvl_1', [a11, a31], orgid, 300)
+    
+
+class RelatedTest(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        assert isinstance(Attribute._backend, (MongoBackend, MockMongoBackend))
+        Attribute._backend.drop()
+        make_related_data()
+
+    def test_0_rel_hash_lvl_0(self):
+        r0 = a11.related_hash()
+        self.assertEqual(r0, [])
+        r0 = a11.related_hash(level=0)
+        self.assertEqual(r0, [])
+
+    def test_1_rel_lvl_0(self):
+        r0 = a11.related(level=0)
+        self.assertEqual(r0[0], [])
+        self.assertEqual(r0[1], 1)
+        self.assertEqual(r0[1], 1)        
+
+    def test_2_rel_hash_lvl_1(self):
+        IN = self.assertIn
+        EQ = self.assertEqual
+
+        r1 = a11.related_hash(level=1)
+
+        EQ(len(r1), 3)
+        IN(a11._hash, r1)
+        IN(a12._hash, r1)
+        IN(e1._hash, r1)
+
+    def test_3_rel_lvl_1(self):
+        IN = self.assertIn
+        EQ = self.assertEqual
+
+        r1 = a11.related(level=1)
+
+        EQ(len(r1), 3)
+        EQ(len(r1[0]), 3)
+        EQ(r1[1], 1)
+        EQ(r1[1], 1)
+        IN(a11.doc, r1[0])
+        IN(a12.doc, r1[0])
+        IN(e1.doc, r1[0])
+
+    def test_4_rel_hash_lvl_2(self):
+        IN = self.assertIn
+        EQ = self.assertEqual
+
+        r2 = a11.related_hash(level=2)
+        
+
+        EQ(len(r2), 5)
+        IN(a11._hash, r2)
+        IN(a12._hash, r2)
+        IN(e1._hash, r2)
+        IN(a21._hash, r2)
+        IN(e2._hash, r2)
+
+    def test_5_rel_lvl_2(self):
+        IN = self.assertIn
+        EQ = self.assertEqual
+
+        r2 = a11.related(level=2)
+
+        EQ(len(r2), 3)
+        EQ(len(r2[0]), 5)
+        EQ(r2[1], 1)
+        EQ(r2[1], 1)
+        IN(a11.doc, r2[0])
+        IN(a12.doc, r2[0])
+        IN(e1.doc, r2[0])
+        IN(a21.doc, r2[0])
+        IN(e2.doc, r2[0])
+
+    def test_6_limit_page(self):
+        make_related_data_2()
+
+        IN = self.assertIn
+        EQ = self.assertEqual
+
+        r2, pg, nxt = a11.related(level=2, limit=1)
+
+        EQ(len(r2), 5)
+        EQ(pg, 1)
+        EQ(nxt, 2)
+        IN(a11.doc, r2)
+        IN(a12.doc, r2)
+        IN(e1.doc, r2)
+        IN(a21.doc, r2)
+        IN(e2.doc, r2)
+
+        r2, pg, nxt = a11.related(level=2, limit=0)
+
+        EQ(len(r2), 7)
+        EQ(pg, 1)
+        EQ(nxt, 2)
+        IN(a11.doc, r2)
+        IN(a12.doc, r2)
+        IN(e1.doc, r2)
+        IN(a21.doc, r2)
+        IN(e2.doc, r2)
+        IN(a31.doc, r2)
+        IN(e3.doc, r2)
+
+        
         
 
 

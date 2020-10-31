@@ -147,12 +147,12 @@ class Instance():
         if level < 0:
             raise ValueError(f"level = {level}")
         elif level == 0:
-            return []
+            return [], page, 1
         
         rel_hash = self.related_hash(level, set(), start, end,
                                      limit, skip, page)
         if not rel_hash:
-            return {}, page, 1
+            return [], page, 1
 
         q = {"_hash": {"$in": rel_hash}}
         if itype != 'all':

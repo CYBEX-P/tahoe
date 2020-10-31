@@ -486,7 +486,7 @@ class Event(tahoe.OES):
         if visited is None:
             visited = set()
 
-        all_rel_hash = self._ref + [self._hash]
+        all_rel_hash = set(self._ref + [self._hash])
 
         if not isinstance(level, int):
             raise TypeError(f"level = {type(level)}")
@@ -499,9 +499,9 @@ class Event(tahoe.OES):
         for s in r:
             S = tahoe.parse(s, self._backend, validate=False)
             this_rel_hash = S.related_hash(level, visited.update(self._hash),
-                                           start=statr, end=end)
+                                           start=start, end=end)
             all_rel_hash.update(this_rel_hash)
-        return all_rel_hash
+        return list(all_rel_hash)
 
 
     @property

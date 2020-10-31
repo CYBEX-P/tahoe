@@ -8,8 +8,11 @@ def dtresolve(start , end) -> dict:
   return dict(d)
     
 def limitskip(limit=10, skip=0, page=1):
-  if page>1: skip = (page-1)*limit
-  return {'limit': max(limit,10), 'skip':max(skip,0)}
+  if limit > 10:
+    limit = 10
+  if page > 1:
+    skip = (page-1)*limit
+  return {'limit': limit, 'skip':max(skip,0)}
     
 def branches(d):
   def branch(val, old=[]):
