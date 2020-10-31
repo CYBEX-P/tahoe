@@ -113,6 +113,7 @@ class TDQL(Object):
         data = [aqtype, aqhash, aqdata, auserid, atimestamp,
                 aencrypted, astatus, areport_id, osocket]
         super().__init__('query', data, **kwargs)
+            
 
     @property
     def status(self):
@@ -183,7 +184,7 @@ class TDQL(Object):
     def _unique(self):
         userid = self.data['userid'][0]
         timestamp = self.data['timestamp'][0]
-        unique = self.itype + self.sub_type + self.qhash + \
+        unique = self.itype + self.sub_type + self.qtype + self.qhash + \
                  userid +  str(int(timestamp)//60//60)
         return unique.encode('utf-8')
 

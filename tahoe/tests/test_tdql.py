@@ -31,10 +31,14 @@ def tearDownModule():
 
 def make_test_data():
     builtins.data = {
-        "type" : "count",
-        "attribute" : {"ipv4" : "1.1.1.1"},
-        "filter" : {"itype" : "attribute"},
-        "last" : "1month"
+        "type": "count", 
+        "data" : {
+            "sub_type": "email_addr", 
+            "data": "dn...etto@yahoo.com",
+            "category": "all",
+        "context": "all",
+        "last": "1Y"
+        }
     }
     builtins.canon_data = canonical(data)
     
@@ -45,7 +49,6 @@ def make_test_data():
     builtins.qtype = "count"
     builtins.qdata = canon_data
     builtins.qhash = hashlib.sha256(canon_data.encode()).hexdigest()
-
 
     builtins.q = TDQL(qtype, qdata, qhash, userid, timestamp, encrypted)
     builtins.q_d = q._backend.find_one({'_hash': q._hash})
@@ -63,7 +66,8 @@ class AllTest(unittest.TestCase):
 
         self.assertIsNotNone(q_d)
 
-        q_hash_expected = '517321fabe4a60e7d1efca8379c3653e0274e68f659530b3230d21ee485defec'
+        q_hash_expected = '1d241fc821f28587d2c2dec1c98dc81535' \
+            '559f3a0693bc0a5fb97bbf22a8dfb3'
 
         self.assertEqual(q.itype, 'object')
         self.assertEqual(q_d['itype'], 'object')
@@ -139,8 +143,28 @@ class AllTest(unittest.TestCase):
 
     def test_04_unique(self):
         """Ensure _hash is different for related and count."""
-        pass
-    
+
+        rel_data = {
+            "type": "related", 
+            "data" : {
+                "sub_type": "email_addr", 
+                "data": "dn...etto@yahoo.com",
+                "category": "all",
+            "context": "all",
+            "last": "1Y"
+            }
+        }
+
+        rel_canon_data = canonical(data)
+        rel_qtype = "related"
+        rel_qdata = rel_canon_data
+        rel_qhash = hashlib.sha256(rel_canon_data.encode()).hexdigest()
+
+        rel_q = TDQL(rel_qtype, rel_qdata, rel_qhash,
+                     userid, timestamp, encrypted)
+        rel_q_d = rel_q._backend.find_one({'_hash': rel_q._hash})
+
+        self.assertNotEqual(rel_q._hash, q._hash)    
         
        
 
