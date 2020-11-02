@@ -8,7 +8,7 @@ def dtresolve(start , end) -> dict:
   return dict(d)
     
 def limitskip(limit=10, skip=0, page=1):
-  if limit > 10:
+  if limit < 1 or limit > 10:
     limit = 10
   if page > 1:
     skip = (page-1)*limit
