@@ -221,7 +221,7 @@ class Instance():
         for k, v in kwargs.items():
             if k == '_backend':
                 if not isinstance(v, Backend):
-                    raise TypeError(f"k = {type(v)}, expected 'tahoe.Backend'")
+                    raise TypeError(f"{k}={type(v)}, expected 'tahoe.Backend'")
             elif k == 'category':
                 if v not in {'benign', 'malicious', 'unknown'}:
                     raise ValueError(f"{k} = '{v}'")
@@ -318,12 +318,14 @@ class OES(Instance):
         if add_data is None:
             add_data = []
         else:
-            add_data = self._validate_instance(add_data, ['attribute', 'object'])
+            add_data = self._validate_instance(
+                            add_data, ['attribute', 'object'])
 
         if remove_data is None:
             remove_data = []
         else:
-            remove_data = self._validate_instance(remove_data, ['attribute', 'object'])
+            remove_data = self._validate_instance(
+                            remove_data, ['attribute', 'object'])
 
         if not (add_data + remove_data):
             raise ValueError("add_data or remove_data required")
