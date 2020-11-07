@@ -12,7 +12,7 @@ from tahoe.identity.identity import Identity
 
 class Org(Identity):
     """
-    
+    Org handles and manages the organization information. 
     """
     def __init__(self, orgname, user, admin, name='', **kwargs):
         # user = self._validate_instance(user, ['user'])
