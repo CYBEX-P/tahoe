@@ -1,16 +1,23 @@
-if __name__ in ["__main__", "urlobject"]:
-    import sys
-    sys.path.append("..")
-    from instance import Attribute, Object
-    from misc import features
-    from feature import *   
-else: 
-    from ..instance import Attribute, Object
-    from ..misc import features
-    from .feature import *
+# if __name__ in ["__main__", "urlobject"]:
+#     import sys, os
+#     sys.path.append("..")
+#     from instance import Attribute, Object
+#     from misc import features
+#     from feature import *   
+# else:
+ 
+import sys, os
+sys.path.append('/home/goofygooby/Project_and_work/All Programming material/Cybex/tahoe_TVAPI/tahoe/tahoe/')
+
+from attribute.attribute import Attribute
+from object import Object
+from misc import features
+from vt_py import vt
+from vt_api_key import API_key as APIK
 
  
-import copy, pdb, hashlib 
+import copy, pdb, hashlib
+
     
 _MAX_ENRICHMENT_ATTEMPT = 3
 
@@ -106,6 +113,33 @@ class UrlObject(Object):
         # get the score
         # make an attribute out of the score
         # store the score using self.add_instance()
+        """
+        Current Base implementation of url object Total Virus enrichment. 
+        """
+
+        total_engines = 0
+
+        tahoe_VTAPI_query = vt.Client(APIK)
+        
+        VT_url_id = vt.url_id(self.data['url'])
+        url_stats = tahoe_VTAPI_query.user("/urls/{}",VT_url_id)
+        malicious_score = url_stats.last_analysis_stats["malicious"]
+
+        for key, value in url.last_analysis_stats.items():
+            total_engines += int(value)
+
+        malicious_and_total_score = malicious_score + "/" + str(total_engines)
+
+        VT_attr = Attribute('Virus_Total_Score', malicious_and_total_score)
+
+        return VT_attr
+
+        # self.add_instance(VT_attr, update=True)
+
+        # enid = "virustotal"
+
+        # self.record_enrichment(endid)
+
 
     def enrich_whois(self):
         if not self.should_enrich('whois'): return
