@@ -5,7 +5,7 @@
 #     from misc import features
 #     from feature import *   
 # else:
- 
+
 import sys, os
 sys.path.append('/home/goofygooby/Project_and_work/All Programming material/Cybex/tahoe_TVAPI/tahoe/tahoe/')
 
@@ -108,14 +108,25 @@ class UrlObject(Object):
         self.record_enrichment(enid)
 
     def enrich_virustotal(self):
-        return NotImplemented
         # call virus total api with the url
         # get the score
         # make an attribute out of the score
         # store the score using self.add_instance()
         """
-        Current Base implementation of url object Total Virus enrichment. 
+        Current Base implementation of url object Total Virus enrichment, Establishes a
+        client connection with the VT API and pulls the maliciouse score. The malicious 
+        score is essentially a representation of how many security engines have scanned
+        and deemed the URL object as "malicious." That 'malcicious score out of however
+        many security engines' is turned into an attribute and stored in the Tahoe backend.
+
+        E.G: 'http://formacao.org.br/wx.htm', a phishing URL
+            Malicious score = 13
+            Total engines that have scanned it = 53
+
+            so an attribute would be like this -> Attribute('Virus_total', 13/53)
+
         """
+        if not self.should_enrich('virustotal') : return
 
         total_engines = 0
 
@@ -123,22 +134,30 @@ class UrlObject(Object):
         
         VT_url_id = vt.url_id(self.data['url'])
         url_stats = tahoe_VTAPI_query.user("/urls/{}",VT_url_id)
+
         malicious_score = url_stats.last_analysis_stats["malicious"]
+
+        #some extra code that pulls other information from the API query
+        '''
+        targeted_brands = url.targeted_brand
+        vt_reputation = url.reputation
+        suspicious_score = url.last_analysis_stats["suspicious"]
+        '''
 
         for key, value in url.last_analysis_stats.items():
             total_engines += int(value)
 
         malicious_and_total_score = malicious_score + "/" + str(total_engines)
 
-        VT_attr = Attribute('Virus_Total_Score', malicious_and_total_score)
+        
 
-        return VT_attr
+        VT_attr = Attribute('Virus_Total', malicious_and_total_score)
 
-        # self.add_instance(VT_attr, update=True)
+        self.add_instance(VT_attr, update=True)
 
-        # enid = "virustotal"
+        enid = "virustotal"
 
-        # self.record_enrichment(endid)
+        elf.record_enrichment(endid)
 
 
     def enrich_whois(self):
@@ -225,7 +244,7 @@ class UrlObject(Object):
                     self._enrichment[enid] >= _MAX_ENRICHMENT_ATTEMPT
     
     def record_enrichment(self, enid):
-        assert enid in ['dns', 'geoip', 'host', 'ipwhois', 'lexical', 'whois', ], "Invalid enrichment id!"
+        assert enid in ['dns', 'geoip', 'host', 'ipwhois', 'lexical', 'whois','virustotal' ], "Invalid enrichment id!"
         
         if not hasattr(self, '_enrichment'): self._enrichment = {enid:1}
         elif not enid in self._enrichment: self._enrichment[enid] = 1
