@@ -6,8 +6,13 @@
 #     from feature import *   
 # else:
 
+# I changed some pathing up here for testing reasons, there should be no problem after reverting back to previous
+# import pathing
+
 import sys, os
 sys.path.append('/home/goofygooby/Project_and_work/All Programming material/Cybex/tahoe_TVAPI/tahoe/tahoe/')
+
+
 
 from attribute.attribute import Attribute
 from object import Object
@@ -114,7 +119,7 @@ class UrlObject(Object):
         # store the score using self.add_instance()
         """
         Current Base implementation of url object Total Virus enrichment, Establishes a
-        client connection with the VT API and pulls the maliciouse score. The malicious 
+        client connection with the VT API and pulls the malicious score. The malicious 
         score is essentially a representation of how many security engines have scanned
         and deemed the URL object as "malicious." That 'malcicious score out of however
         many security engines' is turned into an attribute and stored in the Tahoe backend.
@@ -125,31 +130,41 @@ class UrlObject(Object):
 
             so an attribute would be like this -> Attribute('Virus_total', 13/53)
 
+        Note: Potential extra enrinchment factors include: the targeted brand(s), the 
+        vt community reputation score, suscipicious score (for more forensic information)
+
         """
         if not self.should_enrich('virustotal') : return
 
+        #the number of security engines and systems
         total_engines = 0
 
+        # Create client-side connection to the VT API
         tahoe_VTAPI_query = vt.Client(APIK)
         
+        # Create a url_id token with the url_objects provided URL
+        # provided URL to scan goes here
         VT_url_id = vt.url_id(self.data['url'])
-        url_stats = tahoe_VTAPI_query.user("/urls/{}",VT_url_id)
+        
+        # This is the where the actual query is made so the the VT API
+        url_stats = tahoe_VTAPI_query.get_object("/urls/{}",VT_url_id)
 
         malicious_score = url_stats.last_analysis_stats["malicious"]
-
-        #some extra code that pulls other information from the API query
-        '''
-        targeted_brands = url.targeted_brand
-        vt_reputation = url.reputation
-        suspicious_score = url.last_analysis_stats["suspicious"]
-        '''
 
         for key, value in url.last_analysis_stats.items():
             total_engines += int(value)
 
-        malicious_and_total_score = malicious_score + "/" + str(total_engines)
+        malicious_and_total_score = str(malicious_score) + "/" + str(total_engines)
 
-        
+
+        tahoe_VTAPI_query.close()
+
+        # some extra code that pulls other information from the API query, more
+        """
+        targeted_brands = url.targeted_brand
+        vt_reputation = url.reputation
+        suspicious_score = url.last_analysis_stats["suspicious"]
+        """
 
         VT_attr = Attribute('Virus_Total', malicious_and_total_score)
 
@@ -157,7 +172,7 @@ class UrlObject(Object):
 
         enid = "virustotal"
 
-        elf.record_enrichment(endid)
+        self.record_enrichment(endid)
 
 
     def enrich_whois(self):
