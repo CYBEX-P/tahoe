@@ -11,11 +11,11 @@ if __name__ != 'tahoe.tests.identity.test_user':
                 os.path.join('..', '..', '..')] + sys.path
     del sys, os
 
-from tahoe import Instance, Attribute
-from tahoe.identity import Identity, User
+import tahoe
+from tahoe import Instance, Attribute, Object
+from tahoe.identity import User, Org
 from tahoe.identity.backend import IdentityBackend, MockIdentityBackend
 from tahoe.tests.identity.test_backend import setUpBackend, tearDownBackend
-
 
 def make_test_data():
     builtins.u = User('johndoe@example.com', 'Abcd1234', 'John Doe')
@@ -28,9 +28,22 @@ def make_test_data():
 
     builtins.an = Attribute('name', 'John Doe')
 
+    builtins.u1 = User('user1@example.com', 'Abcd1234', 'User 1')
+    builtins.u2 = User('user2@example.com', 'Abcd1234', 'User 2')
+    builtins.u3 = User('user3@example.com', 'Abcd1234', 'User 3')
+    builtins.u4 = User('user4@example.com', 'Abcd1234', 'User 4')
+    builtins.u5 = User('user5@example.com', 'Abcd1234', 'User 5')
+
+    builtins.o1 = Org('org1', u1, u1, 'Organization 1')
+    builtins.o2 = Org('org2', [u1,u2], u2, 'Organization 2')
+    builtins.o3 = Org('org3', [u2], u2, 'Organization 3')
+    builtins.o4 = Org('org4', [u4, u5], [u4,u5], 'Organization 4')
+
 
 def delete_test_data():
-    del builtins.u, builtins.ud, builtins.ae, builtins.ap, builtins.an
+    del builtins.u, builtins.ud, builtins.ae, builtins.ap, builtins.an,
+    builtins.u1, builtins.u2, builtins.u3, builtins.o1, builtins.o2,
+    builtins.o3, builtins.u4, builtins.u5, builtins.o4
 
 
 def setUpModule():
@@ -131,11 +144,11 @@ class PasswordTest(unittest.TestCase):
     def tearDownClass(cls):
         delete_test_data()
 
-    def test_01_checkpass(self):
-        self.assertTrue(u.checkpass('Abcd1234'))
-        self.assertFalse(u.checkpass('wrong_pass'))
+    def test_01_check_pass(self):
+        self.assertTrue(u.check_pass('Abcd1234'))
+        self.assertFalse(u.check_pass('wrong_pass'))
 
-    def test_02_changepass(self):
+    def test_02_change_pass(self):
         EQ = self.assertEqual
         NEQ = self.assertNotEqual
         IN = self.assertIn
@@ -154,7 +167,7 @@ class PasswordTest(unittest.TestCase):
         IN(ap._hash, u._ref)
         IN(ap._hash, ud['_ref'])
 
-        u.changepass('newpassword')
+        u.change_pass('newpassword')
         builtins.ud = u._backend.find_one({'_hash': u._hash}, {'_id': 0})
 
         NEQ(u.data['password'][0], old_pass)
@@ -183,6 +196,80 @@ class PasswordTest(unittest.TestCase):
         IN(ap._hash, u._ref)
         IN(ap._hash, ud['_ref'])
 
+
+class OrgTest(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        User._backend.drop()
+        make_test_data()
+
+    @classmethod
+    def tearDownClass(cls):
+        delete_test_data()
+
+    def test_orgs_admin_of(self):
+        IN = self.assertIn
+        RAS = self.assertRaises
+
+        r = u1.orgs_admin_of()
+        for i in r:
+            IN(i['_hash'], [o1._hash])
+
+        r = u3.orgs_admin_of()
+        RAS(StopIteration, r.next)
+               
+    def test_orgs_user_of(self):
+        IN = self.assertIn
+        RAS = self.assertRaises
+        
+        r = u1.orgs_user_of()
+        for i in r:
+            IN(i['_hash'], [o1._hash, o2._hash])
+
+        r = u3.orgs_user_of()
+        RAS(StopIteration, r.next)
+
+
+
+class IsAdminOfTest(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        User._backend.drop()
+        make_test_data()
+
+    @classmethod
+    def tearDownClass(cls):
+        delete_test_data()
+
+    def test_1_one_user_one_admin(self):
+        self.assertEqual(True, u1.is_admin_of(o1))
+
+    def test_2_two_user_one_admin(self):
+        self.assertEqual(True, u2.is_admin_of(o2))
+
+    def test_3_two_user_two_admin(self):
+        self.assertEqual(True, u4.is_admin_of(o4))
+
+    def test_4_False_org(self):
+        self.assertEqual(False, u1.is_admin_of(o4))
+
+    def test_5_one_user_one_admin_hash(self):
+        self.assertEqual(True, u1.is_admin_of(o1._hash))
+            
+    def test_6_two_user_one_admin_hash(self):
+        self.assertEqual(True, u2.is_admin_of(o2._hash))
+
+    def test_7_two_user_two_admin_hash(self):
+        self.assertEqual(True, u4.is_admin_of(o4._hash))
+
+    def test_8_False_org_hash(self):
+        self.assertEqual(False, u1.is_admin_of(o4._hash))
+
+    def test_9_valueerror_invalid_org_hash(self):
+        self.assertRaises(ValueError, u1.is_admin_of, 'abc')
+
+    def test_10_valueerror_hash_is_valid_but_not_org(self):
+        self.assertRaises(ValueError, u1.is_admin_of, u2._hash)
 
 if __name__ == '__main__':
     unittest.main()

@@ -7,4 +7,3 @@ class PasswordError(Exception):
 
 class UserError(Exception):
   pass
-

@@ -5,6 +5,7 @@
 Rubbish/
 input/TEMP/
 *_temp
+_backup
 
 # ==================================
 # BOILERPLATE

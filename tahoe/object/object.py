@@ -45,6 +45,9 @@ class Object(tahoe.OES):
     """
     An Object holds complex information, like a file.
 
+    An object contains one or attributes or other objects
+    to represent complex information like a file or an email.
+
     Attributes
     ----------
     itype : str
@@ -76,7 +79,7 @@ class Object(tahoe.OES):
         of `__init__` is a `list`. See `Object.__init__()` for more.    
     _hash : str
         SHA-256 digest of `<itype, sub_type, data>`.
-        A globally unique but reproducible ID of the attribute.
+        A globally unique but reproducible ID of the object.
     _backend : tahoe.backend.Backend, default=NoBackend()
         Data storage. Use `NoBackend` for only data
         sharing and `MongoBackend` for storing the data.

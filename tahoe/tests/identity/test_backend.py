@@ -8,6 +8,7 @@ if __name__ != 'tahoe.tests.identity.test_backend':
     sys.path = ['..', os.path.join('..', '..'),
                 os.path.join('..', '..', '..')] + sys.path
     del sys, os
+
 from tahoe.identity.backend import *
 
 

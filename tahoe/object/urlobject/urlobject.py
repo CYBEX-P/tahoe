@@ -147,7 +147,7 @@ class URLObject(tahoe.Object):
 
     # Public methods
 
-    def enrich_dns(self):
+    def enrich_dns(self, force=False):
         if not self.should_enrich('dns'): return
         
         self.enrich_host()

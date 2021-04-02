@@ -193,7 +193,14 @@ class Instance():
     def set_backend(cls, _backend):
         cls._backend = _backend
 
+
     # Protected & Private methods
+
+    def _is_instance(self, instance, type_str):
+        """Returns True instance of type `tahoe.type_str`."""
+
+        instance_type = getclass(type_str)
+        return isinstance(instance, instance_type)
 
     @property
     def _unique(self):
