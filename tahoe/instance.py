@@ -102,13 +102,13 @@ class Instance():
 
     # Public methods
 
-    def delete(self):
+    def delete(self, delete_children=True):
         r = self._backend.find_one({'_ref': self._hash}, {**_P, '_hash': 1})
         if r:
             raise DependencyError(f"referred in {r['_hash']}")
         self._backend.delete_one({'_hash': self._hash})
 
-        if not hasattr(self, '_cref'):
+        if not hasattr(self, '_cref') or not delete_children:
             return
 
         r = self._backend.find({'_hash': {'$in': self._cref}})
@@ -140,7 +140,7 @@ class Instance():
         return json.dumps(self.doc)
 
     def related(self, itype='all', level=1, p=_P, start=0, end=0,
-                limit=0, skip=0, page=1):
+            limit=0, skip=0, page=1, category='all', context='all'):
 
         if not isinstance(level, int):
             raise TypeError(f"level = {type(level)}")
@@ -150,7 +150,7 @@ class Instance():
             return [], page, 1
         
         rel_hash = self.related_hash(level, set(), start, end,
-                                     limit, skip, page)
+                        limit, skip, page, category, context)
         if not rel_hash:
             return [], page, 1
 
@@ -162,7 +162,7 @@ class Instance():
         return related, page, page+1
         
     def related_hash(self, level=0, visited=None, start=0, end=0,
-                     limit=0, skip=0, page=1):
+            limit=0, skip=0, page=1, category='all', context='all'):
 
         if visited is None:
             visited = set()
@@ -177,7 +177,7 @@ class Instance():
         all_rel_hash = set()
 
         p = {**_P, "itype": 1, "sub_type": 1, "_hash": 1, "_ref": 1}
-        r = self.events(p, start, end, limit, skip, page)
+        r = self.events(p, start, end, limit, skip, page, category, context)
         
         for e in r:
             if e['_hash'] in visited:
@@ -207,17 +207,30 @@ class Instance():
         unique = self.itype + self.sub_type + canonical(self.data)
         return unique.encode('utf-8')
 
-    def _update(self, update):
+    def _update(self, update=None):
         """
+        Updates fields of a TAHOE instance in both
+        backend and Python object.
+
         Warning
         -------
         Does not update `_hash` or `_ref`.
-        """
         
-        ret = self._backend.find_one_and_update(
-            {"_hash":self._hash}, {"$set":update}, _P, return_document=True)
+        Parameters
+        ----------
+        update : dict or None
+            If None the Python object just syncs with backend.
+        
+        """
+
+        q = {"_hash":self._hash}
+        if update is None:
+            ret = self._backend.find_one(q, _P)
+        else:
+            ret = self._backend.find_one_and_update(q, {"$set":update},
+                                                    _P, return_document=True)
         if ret is None:
-            raise BackendError('cannot find instance in backend')
+            raise BackendError('Cannot find instance in backend!')
         for k, v in ret.items():
             setattr(self, k, v)
 

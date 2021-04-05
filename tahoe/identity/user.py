@@ -9,17 +9,19 @@ if __name__ != 'tahoe.identity.user':
     del sys, os
 
 import tahoe
-
 from tahoe import Attribute
-from tahoe.identity.error import PasswordError
+from tahoe.identity.error import PasswordError, UserExistsError, OrgExistsError
 from tahoe.identity.identity import Identity
-
 
 _P = {'_id': 0}
 
 
 class User(Identity):
-    def __init__(self, email, password='', name='', **kwargs):
+    def __init__(self, email, password='', name='',
+                 sub_type='cybexp_user', **kwargs):
+
+        assert sub_type in ['cybexp_user', 'cybexp_superuser']
+        
         email_att = Attribute('email_addr', email, _backend=self._backend)
 
         hashed_pass = hashlib.sha256(password.encode('utf-8')).hexdigest()
@@ -27,8 +29,7 @@ class User(Identity):
 
         name_att = Attribute('name', name, _backend=self._backend)
 
-        super().__init__('cybexp_user', [email_att, pass_att, name_att],
-                         **kwargs)
+        super().__init__(sub_type, [email_att, pass_att, name_att], **kwargs)
 
     def __repr__(self):
         return f"User('{self.data['email_addr'][0]}')"
@@ -48,7 +49,8 @@ class User(Identity):
 
     def change_email(self):
         return NotImplemented
-        # if we change the email, hash changes then we need to update reference filed in orgs
+        # if we change the email, hash changes then
+        # we need to update reference filed in orgs
 
     def change_pass(self, newpassword):
         if not all([isinstance(newpassword, str)
@@ -146,8 +148,78 @@ class User(Identity):
 
     
 
+class SuperUser(User):
+    def __init__(self, email, password='', name='', **kwargs):
 
+        super().__init__(email, password, name,
+                         sub_type='cybexp_superuser', **kwargs)
 
+    def __repr__(self):
+        return f"SuperUser('{self.data['email_addr'][0]}')"
+
+    def create_user(self, email, password, name):
+        """
+        Creates an user with specified email address.
+
+        Paramters
+        ---------
+        email : str
+            The email address of the user.
+
+            Note that email address is also the username and the
+            unique identifier of a user in TAHOE.
+        password : str
+            Plaintext password of the user.
+        name : str
+            Full name of the user
+
+        Returns
+        -------
+        tahoe.identity.User
+            The creatd user object.
+
+        Raises
+        ------
+        tahoe.identity.backend.DuplicateUserError
+            If email address is already registered.
+        """
+        
+        if self._backend.user_exists(email):
+            raise UserExistsError(f"Username/email = {email} already exists!")
+        
+        return User(email, password, name, _backend=self._backend)
+
+    def create_org(self, orgname, user, admin, name):
+        """
+        Creates an Org with specified orgname.
+
+        Paramters
+        ---------
+        orgname : str
+            The orgname of the Org. `orgname` is the unique identifier
+            of an Org in TAHOE.
+        user : (list of) tahoe.Idenity.User or User._hash
+            Users of the Org.
+        admin : (list of) tahoe.Idenity.User or User._hash
+            Users of the Org.
+        name : str, optional
+            Full name of the Org
+
+        Returns
+        -------
+        tahoe.identity.Org
+            The creatd Org object.
+
+        Raises
+        ------
+        tahoe.identity.backend.DuplicateError
+            If `orgname` is already registered.
+        """
+        
+        if self.org_exists(orgname):
+            raise OrgExistsError(f"Orgname = {orgname} already exists!")
+        
+        return tahoe.identity.Org(orgname, user, admin, name)
 
 
 

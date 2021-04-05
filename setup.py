@@ -8,7 +8,7 @@ with open(os.path.join(dir_path, "README.md"), "r") as fh:
 
 setuptools.setup(
     name="tahoe",
-    version="0.7.1",
+    version="0.8.0",
     author="Farhan Sadique",
     author_email="qclass@protonmail.com",
     description="TAHOE -- A CyberThreat Language (CTL)",

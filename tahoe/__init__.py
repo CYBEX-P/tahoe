@@ -1,7 +1,7 @@
 import sys
 if sys.version_info < (3, 8) or sys.version_info >= (3, 9):
     import warnings
-    warnings.warn("tahoe is tested on Python 3.8 only")
+##    warnings.warn("tahoe is tested on Python 3.8 only")
     
 
 from .instance import Instance, OES

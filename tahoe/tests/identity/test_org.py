@@ -16,8 +16,8 @@ from tahoe import Instance, Attribute, Object
 from tahoe.identity import User, Org
 from tahoe.identity.backend import IdentityBackend, MockIdentityBackend
 from tahoe.tests.identity.test_backend import setUpBackend, tearDownBackend
-from tahoe.identity.org import AdminIsNotUserError, UserIsAdminError, \
-    UserIsNotAdminError, UserIsInOrgError
+from tahoe.identity.org import UserIsAdminError, \
+    UserIsNotAdminError, UserIsInOrgError, UserIsOnlyAdminError
 
 def make_test_data():
     builtins.u1 = User('user1@example.com', 'Abcd1234', 'User 1')
@@ -234,6 +234,7 @@ class InfoTest(unittest.TestCase):
         EQ(usr1.email, u1.email)
 
 
+
 class AddAdminTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
@@ -281,8 +282,34 @@ class AddAdminTest(unittest.TestCase):
         self.assertRaises(UserIsAdminError, o10.add_admin, u2)
         self.assertRaises(UserIsAdminError, o12.add_admin, u2)
 
-    def test_3_admin_not_user_error(self):
-        self.assertRaises(AdminIsNotUserError, o10.add_admin, u3)
+    def test_3_admin_not_user(self):
+        IN = self.assertIn
+        INN = self.assertIsNotNone
+        
+        o10.add_admin(u3)
+        o10d = Instance._backend.find_one({'_hash': o10._hash})
+
+        o10_email = []
+        for a in o10.data['admin'][0]['cybexp_user']:
+            o10_email.append(a['email_addr'][0])
+        o10d_email =  []
+        for a in o10d['data']['admin'][0]['cybexp_user']:
+            o10d_email.append(a['email_addr'][0])
+
+        IN(u3._hash, o10._cref)
+        IN(u3._hash, o10._ref)
+        IN(u3._hash, o10._usr_ref)
+        IN(u3._hash, o10._adm_ref)
+        IN(u3._hash, o10._acl)
+        IN(u3.email, o10_email)
+
+        INN(o10d)
+        IN(u3._hash, o10d['_cref'])
+        IN(u3._hash, o10d['_ref'])
+        IN(u3._hash, o10d['_usr_ref'])
+        IN(u3._hash, o10d['_adm_ref'])
+        IN(u3._hash, o10d['_acl'])
+        IN(u3.email, o10d_email)
 
 
 
@@ -291,65 +318,54 @@ class AddUserTest(unittest.TestCase):
     def setUpClass(cls):
         Org._backend.drop()
         make_test_data()
+        builtins.o10 = Org('test_org_10', [u1], u1, 'Test Org 10')
 
     @classmethod
     def tearDownClass(cls):
         delete_test_data()
+        del builtins.o10
 
-    def test_1_add_user(self):
-        Org._backend.drop()
-        make_test_data()
-        
-        EQ = self.assertEqual
+    def assertUserInOrg(self, user, org):
         IN = self.assertIn
-        NIN = self.assertNotIn
         INN = self.assertIsNotNone
         
+        orgd = Instance._backend.find_one({'_hash': org._hash})
+
+        org_email = [u['email_addr'][0] for u in org.data['cybexp_user']]
+        orgd_email = [u['email_addr'][0] for u in orgd['data']['cybexp_user']]
+        
+        IN(user._hash, org._cref)
+        IN(user._hash, org._ref)
+        IN(user._hash, org._usr_ref)
+        IN(user._hash, org._acl)
+        IN(user.email, org_email)
+
+        INN(orgd)
+        IN(user._hash, orgd['_cref'])
+        IN(user._hash, orgd['_ref'])
+        IN(user._hash, orgd['_usr_ref'])
+        IN(user._hash, orgd['_acl'])
+        IN(user.email, orgd_email)
+
+    def test_1_add_user(self):
         o2 = Org('test_org', u2, u2, 'Test Org')
-        o2d = Instance._backend.find_one({'_hash': o2._hash})
-
-        o2_email = [ u['email_addr'][0] for u in o2.data['cybexp_user'] ]
-        o2d_email = [ u['email_addr'][0] for u in o2d['data']['cybexp_user'] ]
-
-        NIN(u1._hash, o2._cref)
-        NIN(u1._hash, o2._ref)
-        NIN(u1._hash, o2._usr_ref)
-        NIN(u1._hash, o2._acl)
-        NIN(u1.email, o2_email)
-
-        INN(o2d)
-        NIN(u1._hash, o2d['_cref'])
-        NIN(u1._hash, o2d['_ref'])
-        NIN(u1._hash, o2d['_usr_ref'])
-        NIN(u1._hash, o2d['_acl'])
-        NIN(u1.email, o2d_email)
-        
-        
+        self.assertNotIn(u1._hash, o2._ref)
         o2.add_user(u1)
-        o2d = Instance._backend.find_one({'_hash': o2._hash})
-
-        o2_email = [ u['email_addr'][0] for u in o2.data['cybexp_user'] ]
-        o2d_email = [ u['email_addr'][0] for u in o2d['data']['cybexp_user'] ]
-
-        IN(u1._hash, o2._cref)
-        IN(u1._hash, o2._ref)
-        IN(u1._hash, o2._usr_ref)
-        IN(u1._hash, o2._acl)
-        IN(u1.email, o2_email)
-
-        INN(o2d)
-        IN(u1._hash, o2d['_cref'])
-        IN(u1._hash, o2d['_ref'])
-        IN(u1._hash, o2d['_usr_ref'])
-        IN(u1._hash, o2d['_acl'])
-        IN(u1.email, o2d_email)
-
-        delete_test_data()
-        make_test_data()
+        self.assertUserInOrg(u1, o2)
 
     def test_2_user_in_org_error(self):
         self.assertRaises(UserIsInOrgError, o.add_user, u1)
 
+    def test_3_add_two_users(self):
+        self.assertNotIn(u2._hash, o10._ref)
+        self.assertNotIn(u3._hash, o10._ref) 
+        o10.add_user([u2, u3])
+        self.assertUserInOrg(u2, o10)
+        self.assertUserInOrg(u3, o10)
+
+        
+
+        
 
 class DelAdminTest(unittest.TestCase):
     @classmethod
@@ -398,6 +414,9 @@ class DelAdminTest(unittest.TestCase):
     def test_2_user_is_not_admin_error(self):
         self.assertRaises(UserIsNotAdminError, o10.del_admin, u3)
         self.assertRaises(ValueError, o12.add_admin, o12._hash)
+
+    def test_3_user_is_only_admin_error(self):
+        self.assertRaises(UserIsOnlyAdminError, o11.del_admin, u1)
 
     
 

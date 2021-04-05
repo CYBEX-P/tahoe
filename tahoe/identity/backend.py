@@ -15,14 +15,6 @@ _P = {"_id":0}
 """Default projection for MongoDB queries."""
 
 
-class DuplicateUserError(ValueError):
-    """The username(email) already exists in DB."""
-    pass
-
-class DuplicateOrgError(ValueError):
-    """The orgname already exists in DB."""
-    pass
-
 class _IdentityBackendBase():
     """
     Parent of both IdentityBackend and MockIdentityBackend so that
@@ -42,71 +34,8 @@ class _IdentityBackendBase():
 
     def create_superuser(self, email, password, name):
         return NotImplemented
-        
 
-    def create_user(self, email, password, name):
-        """
-        Creates an user with specified email address.
 
-        Paramters
-        ---------
-        email : str
-            The email address of the user.
-
-            Note that email address is also the username and the
-            unique identifier of a user in TAHOE.
-        password : str
-            Plaintext password of the user.
-        name : str
-            Full name of the user
-
-        Returns
-        -------
-        tahoe.identity.User
-            The creatd user object.
-
-        Raises
-        ------
-        tahoe.identity.backend.DuplicateUserError
-            If email address is already registered.
-        """
-        
-        if self.user_exists(email):
-            raise DuplicateUserError("Username (email) already exists!")
-        
-        return tahoe.identity.User(email, password, name, _backend=self)
-
-##    def create_org(self, orgname, user, admin, name):
-##        """
-##        Creates an Org with specified orgname.
-##
-##        Paramters
-##        ---------
-##        orgname : str
-##            The orgname of the Org. `orgname` is the unique identifier
-##            of an Org in TAHOE.
-##        user : (list of) tahoe.Idenity.User or User._hash
-##            Users of the Org.
-##        admin : (list of) tahoe.Idenity.User or User._hash
-##            Users of the Org.
-##        name : str, optional
-##            Full name of the Org
-##
-##        Returns
-##        -------
-##        tahoe.identity.Org
-##            The creatd Org object.
-##
-##        Raises
-##        ------
-##        tahoe.identity.backend.DuplicateError
-##            If `orgname` is already registered.
-##        """
-##        
-##        if self.user_exists(email):
-##            raise DuplicateUserError("Username (email) already exists!")
-##        
-##        return tahoe.identity.User(email, password, name, _backend=self)
 
     def find_user(self, email=None, _hash=None, p=_P, parse=False):
         """
@@ -142,9 +71,14 @@ class _IdentityBackendBase():
         if email:
             thisuser = tahoe.identity.User(email, _backend=tahoe.NoBackend())
             _hash = thisuser._hash
-        r = self.find_one({"itype":"object",
-                           "sub_type":"cybexp_user",
-                           "_hash": _hash}, p)
+
+        r = self.find_one(
+            {
+                "itype":"object",
+                "sub_type": {"$in": ["cybexp_user", "cybexp_superuser"]},
+                "_hash": _hash
+            }, p)
+        
         if parse:
             r = tahoe.parse(r, backend=self, validate=False)
         return r

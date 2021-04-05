@@ -9,28 +9,13 @@ import tahoe
 from tahoe import Attribute, Object, parse
 from tahoe.identity.error import UserError
 from tahoe.identity.identity import Identity
+from tahoe.identity.error import UserIsAdminError, UserIsInAclError, \
+     UserIsNotInAclError, UserIsInOrgError, UserIsNotAdminError, \
+     UserIsNotInOrgError, UserIsOnlyAdminError
 
 
 # Default MongoDB Projection
 _P = {'_id': 0}
-
-
-# Custom Error Classes
-
-class AdminIsNotUserError(Exception):
-  pass
-
-
-class UserIsAdminError(Exception):
-  pass
-
-
-class UserIsNotAdminError(Exception):
-  pass
-
-
-class UserIsInOrgError(Exception):
-  pass
 
 
 class Org(Identity):
@@ -188,11 +173,10 @@ class Org(Identity):
 
         new_admin_data = self.get_admins()
         for u in user:
-            if not u.is_user_of(self):
-                raise AdminIsNotUserError(
-                    f"Admin must be user of org = {u._hash}")
             if u.is_admin_of(self):
-                raise UserIsAdminError(f"User is already Admin = {u._hash}")
+                raise UserIsAdminError(f"User is already admin = {u._hash}!")
+            if not u.is_user_of(self):
+                self.add_user(u)
             new_admin_data.append(u)
 
         new_admin = Object('admin', new_admin_data, _backend=self._backend)
@@ -224,12 +208,37 @@ class Org(Identity):
         user_hash = [u._hash for u in user]
         for u in user:
             if u.is_user_of(self):
-                raise UserIsInOrgError("User already exists = {u._hash}")
+                raise UserIsInOrgError(f"User already in Org = {u._hash}!")
             self.add_instance(u)
 
         new_usr_ref = self._usr_ref + user_hash
         new_acl = self._acl + user_hash
         self._update({'_usr_ref': new_usr_ref , '_acl': new_acl})
+
+    def add_user_to_acl(self, user):
+        """
+        Add user to self._acl (self is an Org).
+
+        Parameters
+        ----------
+        user : tahoe.Identity.User or str or list
+            If `str`, user is assumed to be `_hash` of user. If `list`
+            it must contain User or valid User._hash.
+
+        Returns
+        -------
+        None
+        """
+
+        user = self._validate_user(user)
+        user_hash = []
+        for u in user:
+            if u._hash in self._acl:
+                raise UserIsInAclError(f"User already in ACL = {u._hash}!")
+            user_hash.append(u._hash)
+
+        new_acl = self._acl + user_hash
+        self._update({'_acl': new_acl})
         
     def del_admin(self, user):
         """
@@ -259,7 +268,9 @@ class Org(Identity):
 
         for u in user:
             if not u.is_admin_of(self):
-                raise UserIsNotAdminError(f"User is not an Admin = {u._hash}")
+                raise UserIsNotAdminError(f"User is not admin = {u._hash}!")
+            if self.num_admin() == 1:
+                raise UserIsOnlyAdminError(f"User is only admin = {u._hash}!")
 
         new_admin_data = []
         for a in self.get_admins():
@@ -290,13 +301,43 @@ class Org(Identity):
         user = self._validate_user(user)
         user_hash = [u._hash for u in user]
         for u in user:
+            if not u.is_user_of(self):
+                raise UserIsNotInOrgError(f"User is not in org = {u._hash}!")
             if u.is_admin_of(self):
-                raise UserIsAdminError("Cannot remove admin")
+                raise UserIsAdminError(f"User is admin = {u._hash}!")
             self.remove_instance(u)
 
         new_usr_ref = [u for u in self._usr_ref if u not in user_hash]
         new_acl = [u for u in self._acl if u not in user_hash]
         self._update({'_usr_ref': new_usr_ref , '_acl': new_acl})
+
+    def del_user_from_acl(self, user):
+        """
+        Delete user to self._acl (self is an Org).
+
+        Parameters
+        ----------
+        user : tahoe.Identity.User or str or list
+            If `str`, user is assumed to be `_hash` of user. If `list`
+            it must contain User or valid User._hash.
+
+        Returns
+        -------
+        None
+        """
+
+        user = self._validate_user(user)
+        user_hash = self._acl
+        for u in user:
+            if u.is_admin_of(self):
+                raise UserIsAdminError(
+                    f"Cannot delete admin from ACL = {u._hash}!")
+            if u._hash not in self._acl:
+                raise UserIsNotInAclError(f"User is not in ACL = {u._hash}!")
+            user_hash.remove(u._hash)
+
+        new_acl = user_hash
+        self._update({'_acl': new_acl})
 
     def get_admins(self):
         """
@@ -332,17 +373,11 @@ class Org(Identity):
             result.append(usr)
         return result
 
+    def num_admin(self):
+        return len(self._adm_ref)
 
-
-    def _add_to_acl(self, user):
-        return NotImplemented
-    
-    def _remove_to_acl(self, user):
-        return NotImplemented
-
-
-
-
+    def num_user(self):
+        return len(self._usr_ref)
 
     @property
     def _unique(self):
@@ -350,9 +385,4 @@ class Org(Identity):
         return unique.encode('utf-8')
 
 
-    def _updatehash(self):
-##        newhash = sha256(self._unique)
-        return NotImplemented
-        # update its _hash in the MongoDB
-        # in all references (_ref, _cref, _usr_ref, _acl...)
 

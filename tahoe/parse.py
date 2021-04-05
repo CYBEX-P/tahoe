@@ -35,7 +35,7 @@ def _create_itype_class_map():
     from .session import Session
     from .tdql import TDQL
     from .identity.org import Org
-    from .identity.user import User
+    from .identity.user import User, SuperUser
     
 
     ITYPE_CLASS_MAP['attribute'] = {'default': Attribute}
@@ -44,6 +44,7 @@ def _create_itype_class_map():
     ITYPE_CLASS_MAP['object']['query'] = TDQL
 
     ITYPE_CLASS_MAP['object']['cybexp_user'] = User
+    ITYPE_CLASS_MAP['object']['cybexp_superuser'] = SuperUser
     ITYPE_CLASS_MAP['object']['cybexp_org'] = Org
     
     ITYPE_CLASS_MAP['org'] = {'default': Org}
