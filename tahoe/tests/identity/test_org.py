@@ -8,8 +8,8 @@ import unittest
 
 if __name__ != 'tahoe.tests.identity.test_org':
     import sys, os
-    sys.path = ['..', os.path.join('..', '..'),
-                os.path.join('..', '..', '..')] + sys.path
+    J = os.path.join
+    sys.path = ['..', J('..','..'), J('..','..','..')] + sys.path
     del sys, os
 
 from tahoe import Instance, Attribute, Object

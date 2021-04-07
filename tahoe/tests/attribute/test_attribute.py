@@ -6,20 +6,20 @@ if __name__ != 'tahoe.tests.attribute.test_attribute':
     sys.path = ['..', J('..','..'), J('..','..','..')] + sys.path
     del J, sys, os
 
+import builtins
 import pdb
 from pprint import pprint
 import unittest
 
-from tahoe import Instance, Attribute, Event, Session
+from tahoe import Instance, Attribute, Event, Object, Session
 from tahoe.backend import MongoBackend, MockMongoBackend
 from tahoe.tests.test_backend import MongoBackendTest
-
+    
 
 def setUpModule():
     _backend = MongoBackendTest.setUpClass()
     Instance.set_backend(_backend)
 
-    import builtins
     builtins.orgid = 'a441b15fe9a3cf56661190a0b93b9dec7d041272' \
                 '88cc87250967cf3b52894d11'
 
@@ -104,6 +104,9 @@ class SubTypeTest(unittest.TestCase):
     def test_value_underscore(self):
         a = Attribute('test_attribute', 'test')
         
+
+
+    
 
 class CountTest(unittest.TestCase):
     """
@@ -298,6 +301,23 @@ def make_related_data_2():
 
     e1.set_context(a11, 'benign')
     e3.set_context(a11, 'malicious')
+
+def make_related_data_3():
+    import builtins as b
+    b.aip51 = Attribute('ipv4', '5.1')
+    b.aip52 = Attribute('ipv4', '5.2')
+    b.afn = Attribute('file_name', 'v.exe')
+    b.afh = Attribute('sha256', 'AB12')
+    b.aes = Attribute('email_addr', 'src@e.com')
+    b.aed = Attribute('email_addr', 'dst@e.com')
+
+    b.of = Object('file', [afn, afh])
+    b.os = Object('src', [aip51])
+    b.ose = Object('src', [aes, aip51])
+    b.ode = Object('dst', [aed])
+
+    b.efd = Event('file_download', [of, os, aip52], orgid, 500)
+    b.ee = Event('email', [ose, ode], orgid, 600)
     
 
 class RelatedTest(unittest.TestCase):
@@ -351,12 +371,13 @@ class RelatedTest(unittest.TestCase):
 
         r2 = a11.related_hash(level=2)
         
-        EQ(len(r2), 5)
+        EQ(len(r2), 6)
         IN(a11._hash, r2)
         IN(a12._hash, r2)
         IN(e1._hash, r2)
         IN(a21._hash, r2)
         IN(e2._hash, r2)
+        IN(s1._hash, r2)
 
     def test_05_rel_lvl_2(self):
         IN = self.assertIn
@@ -365,7 +386,7 @@ class RelatedTest(unittest.TestCase):
         r2 = a11.related(level=2)
 
         EQ(len(r2), 3)
-        EQ(len(r2[0]), 5)
+        EQ(len(r2[0]), 6)
         EQ(r2[1], 1)
         EQ(r2[1], 1)
         IN(a11.doc, r2[0])
@@ -373,8 +394,10 @@ class RelatedTest(unittest.TestCase):
         IN(e1.doc, r2[0])
         IN(a21.doc, r2[0])
         IN(e2.doc, r2[0])
+        IN(s1.doc, r2[0])
 
     def test_06_limit_page(self):
+        Attribute._backend.drop()
         make_related_data_2()
 
         IN = self.assertIn
@@ -382,7 +405,7 @@ class RelatedTest(unittest.TestCase):
 
         r2, pg, nxt = a11.related(level=2, limit=1)
 
-        EQ(len(r2), 5)
+        EQ(len(r2), 6)
         EQ(pg, 1)
         EQ(nxt, 2)
         IN(a11.doc, r2)
@@ -390,10 +413,11 @@ class RelatedTest(unittest.TestCase):
         IN(e1.doc, r2)
         IN(a21.doc, r2)
         IN(e2.doc, r2)
+        IN(s1.doc, r2)
 
         r2, pg, nxt = a11.related(level=2, limit=0)
 
-        EQ(len(r2), 7)
+        EQ(len(r2), 8)
         EQ(pg, 1)
         EQ(nxt, 2)
         IN(a11.doc, r2)
@@ -403,42 +427,49 @@ class RelatedTest(unittest.TestCase):
         IN(e2.doc, r2)
         IN(a31.doc, r2)
         IN(e3.doc, r2)
+        IN(s1.doc, r2)
 
     def test_07_start(self):
         EQ = self.assertEqual
-        EQ(len(a11.related_hash(level=2, start=99)), 7)
-        EQ(len(a11.related_hash(level=2, start=100)), 7)
+        EQ(len(a11.related_hash(level=2, start=99)), 8)
+        EQ(len(a11.related_hash(level=2, start=100)), 8)
         EQ(len(a11.related_hash(level=2, start=101)), 3)
         EQ(len(a11.related_hash(level=2, start=301)), 0)
 
     def test_08_end(self):
         EQ = self.assertEqual
         EQ(len(a11.related_hash(level=2, end=99)), 0)
-        EQ(len(a11.related_hash(level=2, end=100)), 5)
-        EQ(len(a11.related_hash(level=2, end=101)), 5)
-        EQ(len(a11.related_hash(level=2, end=301)), 7)
+        EQ(len(a11.related_hash(level=2, end=100)), 6)
+        EQ(len(a11.related_hash(level=2, end=101)), 6)
+        EQ(len(a11.related_hash(level=2, end=301)), 8)
 
     def test_09_start_end(self):
         EQ = self.assertEqual
         EQ(len(a11.related_hash(level=2, start=50, end=99)), 0)
-        EQ(len(a11.related_hash(level=2, start=50, end=100)), 5)
-        EQ(len(a11.related_hash(level=2, start=100, end=101)), 5)
+        EQ(len(a11.related_hash(level=2, start=50, end=100)), 6)
+        EQ(len(a11.related_hash(level=2, start=100, end=101)), 6)
         EQ(len(a11.related_hash(level=2, start=101, end=301)), 3)
-        EQ(len(a11.related_hash(level=2, start=50, end=301)), 7)
+        EQ(len(a11.related_hash(level=2, start=50, end=301)), 8)
 
     def test_10_category(self):
         EQ = self.assertEqual
-        EQ(len(a11.related_hash(level=2, category='all')), 7)
-        EQ(len(a11.related_hash(level=2, category='malicious')), 5)
+        EQ(len(a11.related_hash(level=2, category='all')), 8)
+        EQ(len(a11.related_hash(level=2, category='malicious')), 6)
         EQ(len(a11.related_hash(level=2, category='unknown')), 0)
         EQ(len(a11.related_hash(level=2, category='benign')), 3)
 
     def test_11_context(self):
         EQ = self.assertEqual
-        EQ(len(a11.related_hash(level=2, context='all')), 7)
+        EQ(len(a11.related_hash(level=2, context='all')), 8)
         EQ(len(a11.related_hash(level=2, context='malicious')), 3)
         EQ(len(a11.related_hash(level=2, context='unknown')), 0)
-        EQ(len(a11.related_hash(level=2, context='benign')), 5)
+        EQ(len(a11.related_hash(level=2, context='benign')), 6)
+
+    def test_12_summary_graph(self):
+        make_related_data_3()
+        EQ = self.assertEqual
+        r = aip51.related(level=2, summary_graph=True)
+##        EQ(len(a11.related_hash(level=2, summary_graph=True)), 7)
         
 
 

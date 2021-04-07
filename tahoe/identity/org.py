@@ -9,9 +9,9 @@ import tahoe
 from tahoe import Attribute, Object, parse
 from tahoe.identity.error import UserError
 from tahoe.identity.identity import Identity
-from tahoe.identity.error import UserIsAdminError, UserIsInAclError, \
-     UserIsNotInAclError, UserIsInOrgError, UserIsNotAdminError, \
-     UserIsNotInOrgError, UserIsOnlyAdminError
+from tahoe.identity.error import AdminIsNotUserError, UserIsAdminError, \
+     UserIsInAclError, UserIsNotInAclError, UserIsInOrgError, \
+     UserIsNotAdminError, UserIsNotInOrgError, UserIsOnlyAdminError
 
 
 # Default MongoDB Projection
@@ -41,58 +41,25 @@ class Org(Identity):
             The creatd Org object.
         """
 
-        if not isinstance(user, list):
-            user = [user]
-        
+        user = self._validate_user(user)
+        admin = self._validate_user(admin)
 
-        user = self._validate_instance(user, ["user"])
-        admin = self._validate_instance(admin, ["user"])
+        self._usr_ref = [u._hash for u in user]
+        self._adm_ref = [a._hash for a in admin]
 
+        for h in self._adm_ref:
+            if h not in self._usr_ref:
+                raise AdminIsNotUserError(f"Admin must be an user = {h}!")
 
-        user_obj = list()
-        admin_obj = list()
-        # print(user, admin)
-        self._usr_ref = list()
-        for u in user:
-            # print(type(u))
-            if isinstance(u, str):
-                user_hash = u
-                user_obj.append(parse(self._backend.find_one({"_hash":u},{"_id":0}),self._backend))
-            elif self._validate_instance(u, ["user"]):
-                user_hash = u._hash
-                user_obj.append(u)
-            else:
-                raise TypeError
-            self._usr_ref.append(user_hash)
-
-        self._adm_ref = list()
-        for ad in admin:
-            if isinstance(ad,str):
-                admin_hash = ad
-                admin_obj.append(parse(self._backend.find_one({"_hash":ad},{"_id":0}),self._backend))
-            elif self._validate_instance(ad, ["user"]):
-                admin_hash = ad._hash
-                admin_obj.append(ad)
-            else:
-                raise TypeError
-            self._adm_ref.append(admin_hash)
-
-
-        # check this after the above because datatype is already standarized (user hash)
-        for u in self._adm_ref:
-            if u not in self._usr_ref:
-                raise UserError("admin must be a user of this org: " \
-                                f"'{u.data['useremail'][0]}'")
-
-        # default ACL
         self._acl = list(set(self._adm_ref + self._usr_ref))
           
         orgname = Attribute('orgname', orgname, _backend=self._backend)
         name = Attribute('name', name, _backend=self._backend)
 
-        admin_obj = Object('admin', admin_obj, _backend=self._backend)
+        obj_admin = Object('admin', admin, _backend=self._backend)
 
-        super().__init__('cybexp_org', [orgname, name, *user_obj, admin_obj], **kwargs)
+        super().__init__('cybexp_org',
+                         [orgname, name, *user, obj_admin], **kwargs)
 
 
 ##    @property

@@ -41,6 +41,7 @@ setuptools.setup(
     install_requires = [
         "pymongo",
         "mongomock",
-        "PyJWT"
+        "PyJWT",
+        "networkx"
     ]
 )

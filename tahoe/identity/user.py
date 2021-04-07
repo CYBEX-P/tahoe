@@ -71,7 +71,11 @@ class User(Identity):
 
     @property
     def doc_no_pass(self):
+        b = self.__dict__.pop('_backend', None)
         user = copy.deepcopy(self)
+        if b:
+            self._backend = b
+        
         passwd = user.data.pop('password')[0]
         att_passwd = Attribute('password', passwd, _backend=tahoe.NoBackend())
         passwd_hash = att_passwd._hash
@@ -216,7 +220,7 @@ class SuperUser(User):
             If `orgname` is already registered.
         """
         
-        if self.org_exists(orgname):
+        if self._backend.org_exists(orgname):
             raise OrgExistsError(f"Orgname = {orgname} already exists!")
         
         return tahoe.identity.Org(orgname, user, admin, name)

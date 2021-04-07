@@ -1,7 +1,7 @@
 """TAHOE TDQL class."""
 
 import hashlib
-import pdb
+import time
 
 if __name__ != 'tahoe.identity.identity':
     import sys, os
@@ -95,7 +95,7 @@ class TDQL(Object):
         aqhash = Attribute('qhash', qhash, _backend=self._backend)        
         aqdata = Attribute('qdata', qdata, _backend=self._backend)
         auserid = Attribute('userid', userid, _backend=self._backend)
-        atimestamp = Attribute('timestamp', timestamp, _backend=self._backend)
+        atimestamp = Attribute('timestamp', time.time(), _backend=self._backend)
         aencrypted = Attribute('encrypted', encrypted, _backend=self._backend)
         
         astatus = Attribute('status', 'invalid', _backend=self._backend)

@@ -21,6 +21,7 @@ import copy
 import json
 import hashlib
 import pdb
+from pprint import pprint
 
 
 if __name__ in ["__main__", "instance"]:
@@ -102,6 +103,21 @@ class Instance():
 
     # Public methods
 
+    def branches(self):
+        d = self.data
+        
+        def branch(val, old=[]):
+            b = []
+            if isinstance(val, dict):
+                for k in val: b += branch(val[k], old+[str(k)])
+            elif isinstance(val, list):
+                for k in val: b += branch(k, old)
+            else:
+                b.append(old + [val])
+            return b
+
+        return branch(d)
+
     def delete(self, delete_children=True):
         r = self._backend.find_one({'_ref': self._hash}, {**_P, '_hash': 1})
         if r:
@@ -143,9 +159,9 @@ class Instance():
             limit=0, skip=0, page=1, category='all', context='all'):
 
         if not isinstance(level, int):
-            raise TypeError(f"level = {type(level)}")
+            raise TypeError(f"Expected type(level)='int' got '{type(level)}'!")
         if level < 0:
-            raise ValueError(f"level = {level}")
+            raise ValueError(f"Expected level>=0 got '{level}'!")
         elif level == 0:
             return [], page, 1
         
@@ -159,6 +175,7 @@ class Instance():
             q.update({"itype": itype})
 
         related = [i for i in self._backend.find(q, p)]
+ 
         return related, page, page+1
         
     def related_hash(self, level=0, visited=None, start=0, end=0,
@@ -168,9 +185,9 @@ class Instance():
             visited = set()
         
         if not isinstance(level, int):
-            raise TypeError(f"level = {type(level)}")
+            raise TypeError(f"Expected type(level)='int' got '{type(level)}'!")
         if level < 0:
-            raise ValueError(f"level = {level}")
+            raise ValueError(f"Expected level>=0 got '{level}'!")
         elif level == 0:
             return []
 

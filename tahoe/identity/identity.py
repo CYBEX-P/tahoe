@@ -12,6 +12,7 @@ if __name__ != 'tahoe.identity.identity':
 
 import tahoe
 from tahoe.parse import parse, getclass
+from .error import InvalidUserHashError
 
 
 P = {"_id":0} 
@@ -105,7 +106,7 @@ class Identity(tahoe.Object):
             if isinstance(u, str):
                 temp = self._backend.find_user(_hash=u, parse=True)
                 if temp is None:
-                    raise ValueError(f"Invalid user hash={u}")
+                    raise InvalidUserHashError(f"Invalid user hash={u}")
                 u = temp
             elif not self._is_instance(u, "user"):
                 raise TypeError(f"Invalid user type={type(u)}")
