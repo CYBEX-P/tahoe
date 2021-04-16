@@ -257,9 +257,9 @@ class Attribute(tahoe.Instance):
             summary=False, summary_graph=False):
 
         if summary_graph:
-            return_type = 'all'
+            itype = 'all'
         elif summary:
-            return_type = 'attribute'
+            itype = 'attribute'
 
         related, page, next_page = super().related(itype, level, p, start, end,
                                         limit, skip, page, category, context)

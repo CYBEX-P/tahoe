@@ -113,30 +113,10 @@ class TDQL(Object):
         data = [aqtype, aqhash, aqdata, auserid, atimestamp,
                 aencrypted, astatus, areport_id, osocket]
         super().__init__('query', data, **kwargs)
-            
 
     @property
-    def status(self):
-        return self.data['status'][0]
-
-    @status.setter
-    def status(self, status):
-        """
-        Set status of this query.
-
-        Parameters
-        ----------
-        status : {"wait", "processing", "ready", "failed"}            
-        """
-        
-        if status not in ('wait', 'processing', 'ready', 'failed'):
-            raise ValueError(f"status: {status}")
-
-        a_new_status = Attribute('status', status, _backend=self._backend)
-        a_old_status = Attribute('status', self.status, _backend=self._backend)
-        
-        if a_new_status._hash != a_old_status._hash:
-            self.replace_instance(a_old_status, a_new_status)
+    def encrypted(self):
+        return self.data['enrypted'][0]
 
     @property
     def qdata(self):
@@ -171,22 +151,6 @@ class TDQL(Object):
 
         if a_new_report_id._hash != a_old_report_id._hash:
             self.replace_instance(a_old_report_id, a_new_report_id)
-
-    @property
-    def timestamp(self):
-        return self.data['timestamp'][0]
-    
-    @property
-    def userid(self):
-        return self.data['userid'][0]
-    
-    @property
-    def _unique(self):
-        userid = self.data['userid'][0]
-        timestamp = self.data['timestamp'][0]
-        unique = self.itype + self.sub_type + self.qtype + self.qhash + \
-                 userid +  str(int(timestamp)//60//60)
-        return unique.encode('utf-8')
 
     def setsocket(self, host, port, nonce):
         """
@@ -226,25 +190,47 @@ class TDQL(Object):
         if o_new_socket._hash != o_old_socket._hash:
             self.replace_instance(o_old_socket, o_new_socket)
 
-##    def setstatus(self, status):
-##        """
-##        Set status of this query.
-##
-##        Parameters
-##        ----------
-##        status : {"wait", "processing", "ready"}            
-##        """
-##        
-##        if status not in ('wait', 'processing', 'ready'):
-##            raise ValueError(f"status: {status}")
-##
-##        a_new_status = Attribute('status', status, _backend=self._backend)
-##        
-##        old_status = self.data['status'][0]
-##        a_old_status = Attribute('status', old_status, _backend=self._backend)
-##
-##        if a_new_status._hash != a_old_status._hash:
-##            self.replace_instance(a_old_status, a_new_status)
+    @property
+    def status(self):
+        return self.data['status'][0]
+
+    @status.setter
+    def status(self, status):
+        """
+        Set status of this query.
+
+        Parameters
+        ----------
+        status : {"wait", "processing", "ready", "failed"}            
+        """
+        
+        if status not in ('wait', 'processing', 'ready', 'failed'):
+            raise ValueError(f"status: {status}")
+
+        a_new_status = Attribute('status', status, _backend=self._backend)
+        a_old_status = Attribute('status', self.status, _backend=self._backend)
+        
+        if a_new_status._hash != a_old_status._hash:
+            self.replace_instance(a_old_status, a_new_status)
+
+    @property
+    def timestamp(self):
+        return self.data['timestamp'][0]
+    
+    @property
+    def userid(self):
+        return self.data['userid'][0]
+    
+    @property
+    def _unique(self):
+        userid = self.data['userid'][0]
+        timestamp = self.data['timestamp'][0]
+        unique = self.itype + self.sub_type + self.qtype + self.qhash + \
+                 userid +  str(int(timestamp)//60//60)
+        return unique.encode('utf-8')
+
+    
+
 
 
 
