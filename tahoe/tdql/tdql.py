@@ -48,7 +48,7 @@ class TDQL(Object):
         insignificant. _cref is a subset of _ref.
     """
   
-    def __init__(self, qtype, qdata, qhash, userid, timestamp,
+    def __init__(self, qtype, qdata, qhash, userid,
                  encrypted=True, **kwargs):
         """
         Parameters
@@ -60,8 +60,6 @@ class TDQL(Object):
             server; in that case `encrypted` should be `True`.
         userid : str
             `_hash` of the user who requested the report.
-        timestamp : float
-            Unix timestamp (UTC) denoting when the report was queried.
         encrypted : bool
             Whether the data field is encrypted with the public key of
             the processing server.

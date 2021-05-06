@@ -19,6 +19,7 @@ from tahoe.misc import canonical, decanonical
 def setUpModule():
     _backend = MongoBackendTest.setUpClass()
     Instance.set_backend(_backend)
+    Attribute.set_backend(_backend)
 
     assert Attribute._backend is Instance._backend
     assert Object._backend is Instance._backend
@@ -49,8 +50,7 @@ def make_test_data():
     builtins.qtype = "count"
     builtins.qdata = canon_data
     builtins.qhash = hashlib.sha256(canon_data.encode()).hexdigest()
-
-    builtins.q = TDQL(qtype, qdata, qhash, userid, timestamp, encrypted)
+    builtins.q = TDQL(qtype, qdata, qhash, userid, encrypted)
     builtins.q_d = q._backend.find_one({'_hash': q._hash})
 
 class AllTest(unittest.TestCase):
@@ -66,8 +66,8 @@ class AllTest(unittest.TestCase):
 
         self.assertIsNotNone(q_d)
 
-        q_hash_expected = '1d241fc821f28587d2c2dec1c98dc81535' \
-            '559f3a0693bc0a5fb97bbf22a8dfb3'
+        q_hash_expected = '61ee1e55f33651cf82746032b9c28' \
+                          '1d5a546cf4475adbe96c162aa9ae6be1384'
 
         self.assertEqual(q.itype, 'object')
         self.assertEqual(q_d['itype'], 'object')
@@ -81,8 +81,8 @@ class AllTest(unittest.TestCase):
         self.assertEqual(q.data['userid'][0], userid)
         self.assertEqual(q_d['data']['userid'][0], userid)
         
-        self.assertEqual(q.data['timestamp'][0], -1)
-        self.assertEqual(q_d['data']['timestamp'][0], -1)
+        self.assertNotEqual(q.data['timestamp'][0], -1)
+        self.assertNotEqual(q_d['data']['timestamp'][0], -1)
 
         self.assertEqual(q.data['encrypted'][0], False)
         self.assertEqual(q_d['data']['encrypted'][0], False)
@@ -161,7 +161,7 @@ class AllTest(unittest.TestCase):
         rel_qhash = hashlib.sha256(rel_canon_data.encode()).hexdigest()
 
         rel_q = TDQL(rel_qtype, rel_qdata, rel_qhash,
-                     userid, timestamp, encrypted)
+                     userid, encrypted)
         rel_q_d = rel_q._backend.find_one({'_hash': rel_q._hash})
 
         self.assertNotEqual(rel_q._hash, q._hash)    

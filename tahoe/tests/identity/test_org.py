@@ -16,7 +16,7 @@ from tahoe import Instance, Attribute, Object
 from tahoe.identity import User, Org
 from tahoe.identity.backend import IdentityBackend, MockIdentityBackend
 from tahoe.tests.identity.test_backend import setUpBackend, tearDownBackend
-from tahoe.identity.org import UserIsAdminError, \
+from tahoe.identity.error import InvalidUserHashError, UserIsAdminError, \
     UserIsNotAdminError, UserIsInOrgError, UserIsOnlyAdminError
 
 def make_test_data():
@@ -413,7 +413,7 @@ class DelAdminTest(unittest.TestCase):
 
     def test_2_user_is_not_admin_error(self):
         self.assertRaises(UserIsNotAdminError, o10.del_admin, u3)
-        self.assertRaises(ValueError, o12.add_admin, o12._hash)
+        self.assertRaises(InvalidUserHashError, o12.add_admin, o12._hash)
 
     def test_3_user_is_only_admin_error(self):
         self.assertRaises(UserIsOnlyAdminError, o11.del_admin, u1)

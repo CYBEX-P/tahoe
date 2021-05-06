@@ -14,6 +14,7 @@ if __name__ != 'tahoe.tests.identity.test_identity':
 from tahoe import Instance, Attribute, Object
 from tahoe.identity import Identity, User, Org
 from tahoe.identity.backend import IdentityBackend, MockIdentityBackend
+from tahoe.identity.error import InvalidUserHashError
 from tahoe.tests.identity.test_backend import setUpBackend, tearDownBackend
 
 
@@ -173,20 +174,20 @@ class ValidateUserTest(unittest.TestCase):
         IN(u1._hash, res_hash)
         IN(u2._hash, res_hash)
 
-    def test_valueerror_invalid_hash(self):
-        self.assertRaises(ValueError, u1._validate_user, 'abc')
+    def test_InvalidUserHashError_invalid_hash(self):
+        self.assertRaises(InvalidUserHashError, u1._validate_user, 'abc')
 
     def test_typeerror_invalid_type_int_in_list(self):
         self.assertRaises(TypeError, u1._validate_user, [u1, 2])
 
-    def test_valueerror_invalid_str_hash_in_list(self):
-        self.assertRaises(ValueError, u1._validate_user, [u1, 'abc'])
+    def test_InvalidUserHashError_invalid_str_hash_in_list(self):
+        self.assertRaises(InvalidUserHashError, u1._validate_user, [u1, 'abc'])
 
-    def test_valueerror_invalid_empty_list(self):
+    def test_InvalidUserHashError_invalid_empty_list(self):
         self.assertRaises(ValueError, u1._validate_user, [])
 
-    def test_typeerror_hash_is_tahoe_object_but_not_user(self):
-        self.assertRaises(ValueError, u1._validate_user, o._hash)
+    def test_InvalidUserHashError_hash_is_tahoe_object_but_not_user(self):
+        self.assertRaises(InvalidUserHashError, u1._validate_user, o._hash)
     
     
 

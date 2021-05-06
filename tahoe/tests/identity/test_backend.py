@@ -9,6 +9,7 @@ if __name__ != 'tahoe.tests.identity.test_backend':
                 os.path.join('..', '..', '..')] + sys.path
     del sys, os
 
+
 from tahoe.identity.backend import *
 
 
@@ -42,12 +43,26 @@ class IdentityBackendTest(unittest.TestCase):
         tearDownBackend(cls._backend)
 
     def test01_repr(self):
-        self.assertEqual(repr(self._backend), "MongoBackend('localhost:27017'," + 
-            " '1ef0534d-6ef7-4624-84c2-7bf59f1b3927', 'instance')")
+        EQ = self.assertEqual
+        if isinstance(self._backend, MockIdentityBackend):
+            EQ(repr(self._backend), "MockMongoBackend(" +
+                "'mongodb://localhost:27017'," + 
+                " '1ef0534d-6ef7-4624-84c2-7bf59f1b3927', 'instance')")
+        elif isinstance(self._backend, IdentityMongoBackend):
+            EQ(repr(self._backend), "MongoBackend(" +
+                "'mongodb://localhost:27017'," + 
+                " '1ef0534d-6ef7-4624-84c2-7bf59f1b3927', 'instance')")
 
     def test02_str(self):
-        self.assertEqual(str(self._backend), "MongoBackend('localhost:27017'," + 
-            " '1ef0534d-6ef7-4624-84c2-7bf59f1b3927', 'instance')")
+        EQ = self.assertEqual
+        if isinstance(self._backend, MockIdentityBackend):
+            EQ(repr(self._backend), "MockMongoBackend(" +
+                "'mongodb://localhost:27017'," + 
+                " '1ef0534d-6ef7-4624-84c2-7bf59f1b3927', 'instance')")
+        elif isinstance(self._backend, IdentityBackend):
+            EQ(repr(self._backend), "MongoBackend(" +
+                "'mongodb://localhost:27017'," + 
+                " '1ef0534d-6ef7-4624-84c2-7bf59f1b3927', 'instance')")
 
     def test03_find(self):
         rr = self._backend.find({})
