@@ -2,6 +2,8 @@
 An attribute holds a single piece of information, like an IP address.
 """
 
+from collections import defaultdict
+import networkx as nx
 import pdb
 
 if __name__ != 'tahoe.attribute.attribute':
@@ -247,15 +249,67 @@ class Attribute(tahoe.Instance):
             q['_ben_ref'] = {'$ne': self._hash}
             q['_mal_ref'] = {'$ne': self._hash}
             
-        return self._backend.find(q, p, **limitskip(limit, skip, page))    
+        return self._backend.find(q, p, **limitskip(limit, skip, page))
+
+
+    def related(self, itype='all', level=1, p=_P, start=0, end=0,
+            limit=0, skip=0, page=1, category='all', context='all',
+            summary=False, summary_graph=False):
+
+        if summary_graph:
+            itype = 'all'
+        elif summary:
+            itype = 'attribute'
+
+        related, page, next_page = super().related(itype, level, p, start, end,
+                                        limit, skip, page, category, context)
+
+        if summary_graph:
+            result = defaultdict(list)
+            label_mapping = {}
+            attribute_data_mapping = {}
+            G = nx.Graph()
+            for i in related:
+                h = i['_hash']
+                itype = i['itype']
+                sub_type = i['sub_type']
+                label_mapping[h] = f"{sub_type}={itype}"
+                if itype == 'attribute':
+                      attribute_data_mapping[h] = (sub_type, i['data'])
+                elif itype in ['object', 'event']:
+                    G.add_edges_from([(h, n2) for n2 in i['_cref']])
+                elif itype == 'session':
+                    G.add_edges_from([(h, n2) for n2 in i['_ref']])
+
+            all_paths = nx.single_source_shortest_path(G, self._hash)
+
+            for k, v in all_paths.items():
+                try:
+                    sub_type, data = attribute_data_mapping[k]
+                    result[sub_type].append([data, [label_mapping[j] for j in v[::-1]]])
+                except KeyError:
+                    pass
+
+            related = dict(result)
+            
+        elif summary:
+            result = defaultdict(list)
+            for i in related:
+                if i['itype'] == 'attribute':
+                    result[i['sub_type']].append(i['data'])
+            related = dict(result)
+
+        return related, page, next_page
 
 
     # Protected & Private Methods in alphabetical order
 
     def _validate_data(self, data):        
         if not isinstance(data, (int, float, str, bool, type(None))):
-            raise TypeError(f"data = {type(data)}, expected" \
-                " (int, float, str, bool, NoneType)")
+            raise TypeError(f"type(data) = {type(data)}, expected" \
+                " (int, float, str, bool, NoneType)!")
+
+        
 
 
 

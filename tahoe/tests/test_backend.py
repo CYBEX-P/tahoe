@@ -1,13 +1,17 @@
 """unittests for tahoe.backend"""
 
-if __name__ != 'tahoe.tests.test_backend':
-    import sys
-    sys.path = ['..', '../..'] + sys.path
-    del sys
-
+import builtins
 import pdb
+from pprint import pprint
 import unittest
 
+if __name__ != 'tahoe.tests.identity.test_org':
+    import sys, os
+    J = os.path.join
+    sys.path = ['..', J('..','..')] + sys.path
+    del sys, os
+
+from tahoe import Attribute
 from tahoe.backend import *
 
 
@@ -45,20 +49,24 @@ class MongoBackendTest(unittest.TestCase):
 
     def test01_repr(self):
         EQ = self.assertEqual
-        if self._backend.mock:
-            EQ(repr(self._backend), "MongoBackend('localhost:27017'," + 
+        if isinstance(self._backend, MockMongoBackend):
+            EQ(repr(self._backend), "MockMongoBackend(" +
+                "'mongodb://localhost:27017'," + 
                 " '1ef0534d-6ef7-4624-84c2-7bf59f1b3927', 'instance')")
-        else:
-            EQ(repr(self._backend), "MongoBackend('localhost:27017'," + 
+        elif isinstance(self._backend, MongoBackend):
+            EQ(repr(self._backend), "MongoBackend(" +
+                "'mongodb://localhost:27017'," + 
                 " '1ef0534d-6ef7-4624-84c2-7bf59f1b3927', 'instance')")
 
     def test02_str(self):
         EQ = self.assertEqual
-        if self._backend.mock:
-            EQ(str(self._backend), "MongoBackend('localhost:27017'," + 
+        if isinstance(self._backend, MockMongoBackend):
+            EQ(repr(self._backend), "MockMongoBackend(" +
+                "'mongodb://localhost:27017'," + 
                 " '1ef0534d-6ef7-4624-84c2-7bf59f1b3927', 'instance')")
-        else:
-            EQ(str(self._backend), "MongoBackend('localhost:27017'," + 
+        elif isinstance(self._backend, MongoBackend):
+            EQ(repr(self._backend), "MongoBackend(" +
+                "'mongodb://localhost:27017'," + 
                 " '1ef0534d-6ef7-4624-84c2-7bf59f1b3927', 'instance')")
 
     def test03_find(self):
@@ -79,6 +87,29 @@ class MongoBackendTest(unittest.TestCase):
         self.assertEqual(doc['b'], 2)
 
 
+class FindAttributeTest(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        Attribute._backend = MongoBackendTest.setUpClass()
+        Attribute._backend.drop()
+
+    @classmethod
+    def tearDownClass(cls):
+        MongoBackendTest.tearDownClass()
+
+    def test_01(self):
+        b = Attribute._backend
+        
+        a1 = Attribute('test_sub_type', 'test_data')
+        a1d = b.find_one({'_hash': a1._hash}, {'_id':0})
+
+        a11 = b.find_attribute('test_sub_type', 'test_data', parse=True)
+        a11d = b.find_attribute('test_sub_type', 'test_data')
+        
+        self.assertEqual(a1.doc, a11.doc)
+        self.assertEqual(a1d, a11d)
+
+        
 
 
     

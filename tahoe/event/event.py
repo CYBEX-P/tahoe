@@ -269,10 +269,33 @@ class Event(tahoe.OES):
                 context.append("unknown")
         return context
 
-
     def isparent(self, data):
         data = self._validate_data(data)
         return all([I._hash in self._ref for I in data])
+
+    def related_hash(self, level=0, visited=None, start=0, end=0,
+                     limit=0, skip=0, page=1):
+
+        if visited is None:
+            visited = set()
+
+        all_rel_hash = set(self._ref + [self._hash])
+
+        if not isinstance(level, int):
+            raise TypeError(f"level: expected 'int' not '{type(level)}'!")
+        if level < 0:
+            raise ValueError(f"level = {level}")
+        elif level == 0:
+            return all_rel_hash
+
+        r = self.sessions()
+        for s in r:
+            S = tahoe.parse(s, self._backend, validate=False)
+            this_rel_hash = S.related_hash(level, visited.update(self._hash),
+                                           start=start, end=end)
+            all_rel_hash.update(this_rel_hash)
+            all_rel_hash.add(S._hash)
+        return list(all_rel_hash)
 
     def sessions(self, p=_P):
         return self._backend.find({'itype': 'session', '_ref': self._hash}) 
@@ -478,30 +501,6 @@ class Event(tahoe.OES):
             elif h in set_mal_ref: set_mal_ref.remove(h)
 
         return list(set_ben_ref), list(set_mal_ref)
-    
-
-    def related_hash(self, level=0, visited=None, start=0, end=0,
-                     limit=0, skip=0, page=1):
-
-        if visited is None:
-            visited = set()
-
-        all_rel_hash = set(self._ref + [self._hash])
-
-        if not isinstance(level, int):
-            raise TypeError(f"level = {type(level)}")
-        if level < 0:
-            raise ValueError(f"level = {level}")
-        elif level == 0:
-            return all_rel_hash
-
-        r = self.sessions({"itype":1,"uuid":1,"_eref":1})
-        for s in r:
-            S = tahoe.parse(s, self._backend, validate=False)
-            this_rel_hash = S.related_hash(level, visited.update(self._hash),
-                                           start=start, end=end)
-            all_rel_hash.update(this_rel_hash)
-        return list(all_rel_hash)
 
 
     @property

@@ -66,12 +66,13 @@ class Session(tahoe.OES):
     _cref : list of str, JSON array of hashlib.sha256().hexdigest()
         A TAHOE `Object` refers other `Instances (Attribute/Object)`,
         called children. `_cref` stores the `_hashes` of child instances.
-        Order of the _hashes is insignificant.
+        Order of the _hashes is insignificant. `_cref` refers the
+        `Instances` in `data` which identify the session.
     _ref : list of str, JSON array of hashlib.sha256().hexdigest()
         A TAHOE `Object` refers other `Instances (Attribute/Object)`.
         , which in turn can refer other tahoe `Instances`. `_ref` stores
         the `_hash` of all these `Instances`. Order of the _hashes is
-        insignificant. _cref is a subset of _ref.
+        insignificant. `_ref` refers `Events` connected to the session.
         
 
     Examples
@@ -174,7 +175,7 @@ class Session(tahoe.OES):
     
 
     def events(self, p=_P, start=0, end=0, limit=0, skip=0, page=1,
-               category='all'):
+               category='all', sort=False):
         """
         Fetch related events in a time range, with pagination.
         
@@ -212,6 +213,13 @@ class Session(tahoe.OES):
         if category != "all":
             self._validate_param(category=category)
             q['category'] = category
-            
-        return self._backend.find(q, p, **limitskip(limit, skip, page))   
+
+        b = self._backend
+
+        if sort:
+            r = b.find(q, p, **limitskip(limit, skip, page)).sort('timestamp')
+        else:
+            r = b.find(q, p, **limitskip(limit, skip, page))
+
+        return r
 
