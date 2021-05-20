@@ -1,14 +1,8 @@
-import os, collections, time
-from pymongo.collection import Collection
-
 if __name__ != 'tahoe.report':
     import sys
     sys.path = ['..'] + sys.path
     del sys
 import tahoe
-
-_LIM = 10000
-_P = {"_id": 0}
 
 class Report(tahoe.Instance):
     def __init__(self, qtype, userid, timestamp, data,

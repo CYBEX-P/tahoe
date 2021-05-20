@@ -114,7 +114,7 @@ class TDQL(Object):
 
     @property
     def encrypted(self):
-        return self.data['enrypted'][0]
+        return self.data['encrypted'][0]
 
     @property
     def qdata(self):

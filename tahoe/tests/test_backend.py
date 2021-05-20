@@ -22,11 +22,12 @@ class NoBackendTest(unittest.TestCase):
 class MongoBackendTest(unittest.TestCase):
 
     @classmethod
-    def setUpClass(cls):
+    def setUpClass(cls, dbname=''):
         from pymongo import MongoClient
         from pymongo.errors import ConnectionFailure
 
-        dbname = "1ef0534d-6ef7-4624-84c2-7bf59f1b3927"
+        assert dbname in ('', 'tahoe_db', 'report_db')
+        dbname = dbname + "1ef0534d-6ef7-4624-84c2-7bf59f1b3927"
 
         try:
             raise ConnectionFailure
