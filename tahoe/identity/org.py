@@ -340,11 +340,19 @@ class Org(Identity):
             result.append(usr)
         return result
 
+    @property
+    def name(self):
+        return self.data['name'][0]
+
     def num_admin(self):
         return len(self._adm_ref)
 
     def num_user(self):
         return len(self._usr_ref)
+
+    @property
+    def orgname(self):
+        return self.data['orgname'][0]
 
     @property
     def _unique(self):
