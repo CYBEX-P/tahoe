@@ -135,20 +135,35 @@ class User(Identity):
         r = self._backend.find(q, _P)
         return r
 
-    def orgs_user_of(self):
+    def orgs_user_of(self, return_type="instance"):
         """
         Returns orgs which this user belongs to.
+
+        Parameters
+        ----------
+        return_type : {"instance", "_hash"}
 
         Returns
         -------
         pymongo.cursor.Cursor
             An iterable of the complete `dict` of the orgs.
         """
-        
+
         q = {'itype': 'object', 'sub_type': 'cybexp_org',
-             '_usr_ref': self._hash}
-        r = self._backend.find(q, _P)
+                 '_usr_ref': self._hash}
+        
+        if return_type == "instance":
+            p = _P
+        elif return_type == "_hash":
+            p = {"_hash": 1, **_P}
+            
+        r = self._backend.find(q, p)
+
+        if return_type == "_hash":
+            r = [i['_hash'] for i in r]
+
         return r
+            
 
     
 

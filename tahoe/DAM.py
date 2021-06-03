@@ -1,220 +1,170 @@
-#!/usr/bin/env python3
+"""TAHOE DAM Module does access control."""
 
+import pdb
 
-if __name__ != 'tahoe.identity.backend':
+if __name__ != 'tahoe.dam':
     import sys, os
-    sys.path = ['..'] + sys.path  #  os.path.join('..', '..')
+    sys.path = ['..'] + sys.path
     del sys, os
-from tahoe import MongoBackend, NoBackend
-from tahoe.identity import IdentityBackend, User
-
-
+import tahoe
+##from tahoe import MongoBackend, NoBackend, MockMongoBackend
+##from tahoe.identity import IdentityBackend, User
 
 
 class ImpossibleError(Exception):
-   """This should not happend exception"""
-   pass
+    """This should not happend exception!"""
+    pass
+
+class MissingUserError(Exception):
+    """Keyword argument `user` is missing for _DAMBASE.find!"""
+    pass
+
+class InvalidUserHashError(Exception):
+    pass
 
 
+class _DAMBase():
+    _identity_backend = tahoe.NoBackend()
+    
+    """
+    Parent of both DAM and MockDAM so that same methods are not written
+    twice.
 
+    DAM inherits all methods from MongoBackend (or MockMongoBackend). It
+    decorates the find and find_one methods to modify the query dict.
+    The decorator take in a key-word argument called `user` & ensures
+    the user finds only the data they have access to.
+ 
+    Notes
+    -----
+    For DAM to work _identity_backend must have users, orgs & _acl.
 
-class DAM(MongoBackend):
-   """
-   MongoBackend that implements ACL, uses a Identity Backend. Used just like a mongo backend with the exeption that a user hash must be used. 
+    See Also:
+    ---------
+    MongoBackend: tahoe.MongoBackend
+    """
 
-   Notes
-   -----
-   For this DAM module to be useful it is recomended that the ident_backend argument has meaningful data,
-      i.e, users, orgs and acl data.
-
-   See Also:
-   ---------
-   MongoBackend: Mongo Backend
-   """
-   def __init__(self, ident_backend, *args, **kwargs):
-      """
-      Parameters
-      ----------
-      ident_backend: IdentityBackend
-         This should be of type Tahoe.IdentityBackend. This is where users, orgs, groups, are stored. This backend is used to pull and enforce access control.
+    def enforce_acl(func):
+        """Decorator that enforces ACL for find/find_one."""
       
-      See Also
-      --------
-      User: User
-      Org: Organization
+        def wrapper(self, *args, **kwargs):
+            """
+            Gets user_acl for `user` and adds that to query.
 
-      """
+            user_acl is a list of orgs the `user` has access to.
+            
+     
+            Parameters
+            ----------
+            query : dict
+            
+            user = tahoe.identity.User or str
+                User or User._hash or  who is queyring the data.
 
-      self._ident_backend = ident_backend
-      super().__init__(*args, **kwargs)
+            Raises
+            ------
+            TypeError
+                If `user` is not tahoe.identity.User._hash or of type
+                tahoe.identity.User.
+            """
 
+            query = args[0] 
 
-   def _user_to_hash(self, user):
-      """returns a `tahoe.User`'s  identifier, `_hash`
-      Raises
-      ------
-      TypeError
-         If `user` is not of type `tahoe.User`
-      """
-      # u = User("fake@example.com", _backend=NoBackend()) // produces empty name attrib, replaced with code below
-      # u._validate_instance(user, ['user']) # will raise TypeError if not User
-      try:
-         user._validate_instance(user, ['user']) # will raise TypeError if not User
-         h = user._hash
-      except:
-         raise TypeError
+            if query.get("itype") != "event":
+                user = kwargs.pop("user", None)
+                return func(self, *args, **kwargs)
 
-      h = user._hash
-      return h
-
-   def _get_groups_for_user(self, user):
-      """Returns the hashes of groups that the `user` belongs to.
-      Parameters
-      ----------
-      user: str or User
-         the user
-
-      Raises
-      ------
-      TypeError
-         If `user` is not tahoe.User._hash or of type tahoe.User
-      """
-
-      if isinstance(user, str):
-         user_hash = user
-      else:
-         user_hash = self._user_to_hash(user)
-      print("TODO: DAM._get_groups_for_user(): implement")
-      return list() # empty untill the below code is enabled
-
-
-      # groups_records = self._ident_backend.find({"itype": "object", 
-      #                                 "sub_type": "cybexp_group",
-      #                                 # may have to change below _acl fields name once group is implemented  
-      #                                 "_acl": user_hash}) 
-      # belonging_gid = list()
-      # for group in groups_records:
-      #    belonging_gid.append(group["gid"]) # TODO question: group hash doesnt seem to be good idea since if group changes then so does hash, then we need to update acl fields
-
-      # return belonging_gid
-
-   def _get_acl_for_user(self, user):
-      """Returns the organizations IDs that the user has acces to. That is, the user is either in the organization's ACL,
-            the user belongs to a group that is in the organizations ACL, or the user has matched a rule or wildcard rule in the organizations ACL.
-      Parameters
-      ----------
-      user: str or User
-         The `User` or hash of a user that will be used for acl lookup
-      Returns
-      -------
-      expanded_acl: list
-         List of organization IDs that the user `user` has access to.
-
-      Raises
-      ------
-      TypeError
-         If `user` is not tahoe.User._hash or of type tahoe.User
-      """
-      if isinstance(user, str):
-         user_hash = user
-      else:
-         user_hash = self._user_to_hash(user) # will raise on bad data
-
-      # check direct access to org's data, user directly in orgs acl
-      direct_acl_orgs = self._ident_backend.find({"itype": "object", 
-                                      "sub_type": "cybexp_org", 
-                                      "_acl": user_hash})
-      direct_access = list()
-      for org in direct_acl_orgs:
-         direct_access.append(org["_hash"]) 
-
-      # # check indirect access to org's data, user belongs to a groupd that has access to org data
-      # users_groups = self._get_groups_for_user(user_hash)
-      # indirect_acl_orgs = self._ident_backend.find({"itype": "object", 
-      #                                 "sub_type": "cybexp_org", 
-      #                                 "_acl": users_groups})
-      # indirect_access = list()
-      # for org in indirect_acl_orgs:
-      #    indirect_access.append(org["_hash"]) 
-      
-      # TODO generate list of orgs that this user has access to only based on their rules
-      #rule_access = list() # list of orgs
-
-      expanded_acl = direct_access #+ indirect_access + rule_access
-
-      return expanded_acl 
-
-   def DAM_find_decorator(func):
-      """
-      Decorator that enforces ACL when doing query/find operations.
-
-      """
-      def wrapper(self, user, *args, **kwargs):
-         """ Will use `user` to find which organization the use has read access to, then it will modify `args[0]`(the query) and apply the acl restrictions.
-               It will do so by editing the query before calling the decorated function `func`. This decorator is for find/query operations only, not insert operations.
-         Parameter
-         ---------
-         user: str or User
-            hash or `User` of the user that is quering the data
-         Raises
-         ------
-         TypeError
-            If `user` is not tahoe.User._hash or of type tahoe.User
-         """
-         query = args[0] # make it editable
-
-         print("Q type:", query.get("itype"))
-         if query.get("itype") == "event":
-            args = list(args) # convert tuple to list, make editable
+            try:
+                user = kwargs.pop("user")
+            except KeyError:
+                raise MissingUserError("Keyword argument `user` is missing!")
 
             if isinstance(user, str):
-               user_hash = user
-            else:
-               user_hash = self._user_to_hash(user)
-                     
-            if 'orgid' in query: # orgid
-               print(query)
-               raise ImpossibleError
+               user = self._identity_backend.find_user(_hash=user, parse=True)
+               if user is None:
+                   raise InvalidUserHashError("`user` is not valid _hash!")
+            elif not isinstance(user, tahoe.identity.User):
+               raise TypeError(f"Invalid type '{type(user)}' for 'user'!")
 
-            allowed_orgs = self._get_acl_for_user(user_hash)
-            print(allowed_orgs)
+            allowed_orgs = user.orgs_user_of(return_type="_hash")
+
+            
+            args = list(args) # convert tuple to list, make it editable
+
+            if "orgid" in query:
+               raise ImpossibleError("'orgid' already part of query!")
+
             acl_query = {"orgid": {"$in": allowed_orgs}} 
             args[0] = {**query, **acl_query}
-         else:
-            print("passthrough mode")
 
-         #print(args)
+
+            result = func(self, *args, **kwargs)
+
+            return result
+
+        return wrapper
+
+    @enforce_acl
+    def find(self, *args, **kwargs):
+        """Find many documents from TAHOE DB."""
+
+        return super().find(*args,**kwargs)
+
+    @enforce_acl
+    def find_one(self, *args, **kwargs):
+        """Find one document from TAHOE DB."""
+
+        return super().find_one(*args,**kwargs)
+
     
-         result = func(self, *args, **kwargs)
-         # print([t for t in result])
-         return result
-
-      return wrapper
-
-   @DAM_find_decorator
-   def find(self, *args, **kwargs):
-      """Calls parent's (MongoBackend) find() function, enforcing access control restrictions defined based on acl in orgs.
-      """
-      return super().find(*args,**kwargs)
-
-   @DAM_find_decorator
-   def find_one(self, *args, **kwargs):
-      """Calls parent's (MongoBackend) find_one() function, enforcing access control restrictions based on acl in orgs.
-      """
-      return super().find_one(*args,**kwargs)
 
 
+class DAM(_DAMBase, tahoe.MongoBackend):
+    def __init__(self, *args, **kwargs):
+        """
+        Parameters
+        ----------
+        _identity_backend = tahoe.identity.IdentityBackend (optional)
+            Where users, orgs, _acls are stored. This backend is used
+            to pull user_acl for access control.
+
+        See Also
+        --------
+        User : tahoe.identity.User
+        Org : tahoe.identity.Org
+        """
+
+        if "_identity._backend" in kwargs:
+            self._identity_backend = kwargs["_identity_backend"]
+        super().__init__(*args, **kwargs)
 
 
-   # def DAM_insert_decorator(func):
-   #    def wrapper(self, *args, **kwargs):
-   #       print("TODO DAM insert decorator")
-   #       # TODO this decorator
-   #       result = func(self, *args, **kwargs)
-   #       return result
 
-   # @DAM_insert_decorator
-   # def insert(self, *args, **kwargs):
-   #    pass
+class MockDAM(_DAMBase, tahoe.backend.MockMongoBackend):
+    def __init__(self, *args, **kwargs):
+        """
+        Parameters
+        ----------
+        _identity_backend = tahoe.identity.IdentityBackend (optional)
+            Where users, orgs, _acls are stored. This backend is used
+            to pull user_acl for access control.
 
-   # 
+        See Also
+        --------
+        User : tahoe.identity.User
+        Org : tahoe.identity.Org
+        """
+
+        if "_identity._backend" in kwargs:
+            self._identity_backend = kwargs["_identity_backend"]
+        super().__init__(*args, **kwargs)
+
+
+
+
+
+
+
+
+
+

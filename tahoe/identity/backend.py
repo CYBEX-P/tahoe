@@ -36,6 +36,51 @@ class _IdentityBackendBase():
         return NotImplemented
 
 
+    def find_org(self, orgname=None, _hash=None, p=_P, parse=False):
+        """
+        Find organization by `orgname` or `_hash`.
+
+        Note that both `orgname` and `_hash` are unique for a Tahoe Org.
+        If both `orgname` and `_hash` are given, `orgname` is used.
+        `Org.orgname` must not be confused with `Org.name`.
+
+        Parameters
+        ----------
+        orgname : str
+            Unique orgname of Org, either `orgname` or `_hash` is required.
+        _hash : str, optional
+            `_hash` of the org, either `orgname` or `_hash` is required.
+        p : dict
+            MongoDB projection
+        parse : bool
+            If True the dict is parsed into tahoe object.
+
+        Returns
+        -------
+        None
+            If org does not exist.
+        dict
+            If parse=False.
+        tahoe.identity.user.Org
+            If parse=True.
+        """
+
+        if orgname is None and _hash is None:
+            raise ValueError("Either 'orgname' or '_hash' is required") 
+
+        if orgname:
+            mock_user = tahoe.identity.User("mock_user",
+                                        _backend=tahoe.NoBackend())
+            thisorg = tahoe.identity.Org(orgname, [mock_user], [mock_user],
+                                        _backend=tahoe.NoBackend())
+            _hash = thisorg._hash
+        r = self.find_one({"itype":"object",
+                           "sub_type":"cybexp_org",
+                           "_hash": _hash}, p)
+
+        if parse:
+            r = tahoe.parse(r, backend=self)
+        return r
 
     def find_user(self, email=None, _hash=None, p=_P, parse=False):
         """
@@ -81,52 +126,6 @@ class _IdentityBackendBase():
         
         if parse:
             r = tahoe.parse(r, backend=self, validate=False)
-        return r
-
-    def find_org(self, orgname=None, _hash=None, p=_P, parse=False):
-        """
-        Find organization by `orgname` or `_hash`.
-
-        Note that both `orgname` and `_hash` are unique for a Tahoe Org.
-        If both `orgname` and `_hash` are given, `orgname` is used.
-        `Org.orgname` must not be confused with `Org.name`.
-
-        Parameters
-        ----------
-        orgname : str
-            Unique orgname of Org, either `orgname` or `_hash` is required.
-        _hash : str, optional
-            `_hash` of the org, either `orgname` or `_hash` is required.
-        p : dict
-            MongoDB projection
-        parse : bool
-            If True the dict is parsed into tahoe object.
-
-        Returns
-        -------
-        None
-            If org does not exist.
-        dict
-            If parse=False.
-        tahoe.identity.user.Org
-            If parse=True.
-        """
-
-        if orgname is None and _hash is None:
-            raise ValueError("Either 'orgname' or '_hash' is required") 
-
-        if orgname:
-            mock_user = tahoe.identity.User("mock_user",
-                                        _backend=tahoe.NoBackend())
-            thisorg = tahoe.identity.Org(orgname, [mock_user], [mock_user],
-                                        _backend=tahoe.NoBackend())
-            _hash = thisorg._hash
-        r = self.find_one({"itype":"object",
-                           "sub_type":"cybexp_org",
-                           "_hash": _hash}, p)
-
-        if parse:
-            r = tahoe.parse(r, backend=self)
         return r
 
     def get_all_plugin(self, enabled=True):

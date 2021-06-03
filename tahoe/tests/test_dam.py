@@ -6,17 +6,62 @@ import pdb
 import unittest
 import time 
 
-if __name__ != 'tahoe.tests.identity.test_org':
+if __name__ != 'tahoe.tests.test_dam':
     import sys, os
-    sys.path = ['..', os.path.join('..', '..'),
-                os.path.join('..', '..', '..')] + sys.path
+    sys.path = ['..', os.path.join('..', '..')] + sys.path
     del sys, os
 
-from tahoe import Instance, Attribute, Object, MongoBackend, DAM, Event
-from tahoe.identity import Identity, Org, User, IdentityBackend, MockIdentityBackend
-# from tahoe.identity.backend import IdentityBackend, MockIdentityBackend
-from tahoe.tests.identity.test_backend import tearDownBackend
+from tahoe.dam import DAM, MockDAM
+from tahoe.tests.identity.test_backend import setUpBackend, tearDownBackend
+from tahoe.identity import Identity, Org, User, IdentityBackend, \
+     MockIdentityBackend
+from tahoe import Instance, Attribute, Object, Event, Session
+from tahoe.backend import MongoBackend, MockMongoBackend
 
+
+def setUpDAM():
+    from pymongo import MongoClient
+    from pymongo.errors import ConnectionFailure
+    dbname = "e3010ec9-e2b8-4273-af46-d7a0a82af95d"
+    try:
+##        raise ConnectionFailure  # debug delete me
+        client = MongoClient()
+        client.admin.command('ismaster')
+        _dam = DAM(dbname=dbname)
+        _backend = MongoBackend(dbname=dbname)
+    except ConnectionFailure:
+        _dam = MockDAM(dbname=dbname)
+        _backend = MockMongoBackend(dbname=dbname)
+    _dam.drop()
+    return _dam, _backend
+
+def tearDownDAM(_dam):
+    dbname = _dam.database.name
+    _dam.database.client.drop_database(dbname)
+
+
+def setUpModule():
+    _identity_backend = setUpBackend()
+    _dam, _backend = setUpDAM()
+
+    _dam._identity_backend = _identity_backend
+
+    Instance.set_backend(_dam)
+    Identity._backend = _identity_backend
+    builtins._backend = _backend
+    
+
+    assert isinstance(Identity._backend,
+                       (IdentityBackend, MockIdentityBackend))
+    assert User._backend is Identity._backend
+    assert Org._backend is Identity._backend
+     
+    
+def tearDownModule():
+    tearDownDAM(Instance._backend)
+    tearDownBackend(Identity._backend)
+    del builtins._backend
+    pass
 
 
 class Hashablelist(list):
@@ -70,81 +115,25 @@ def att_to_edata(*attDocs):
 
 
 
-
-
-
-def setUpIdentBackend():
-    from pymongo import MongoClient
-    from pymongo.errors import ConnectionFailure
-    dbname = "b27d7fd0-832a-4a74-b7e9-1a7b7b86860f"
-    try:
-        #raise ConnectionFailure  # debug delete me
-        client = MongoClient()
-        client.admin.command('ismaster')
-        _backend = IdentityBackend(dbname=dbname)
-    except ConnectionFailure:
-        _backend = MockIdentityBackend(dbname=dbname)
-    _backend.drop()
-    return _backend
-
-def setUpBackend():
-    from pymongo import MongoClient
-    from pymongo.errors import ConnectionFailure
-    dbname = "e3010ec9-e2b8-4273-af46-d7a0a82af95d"
-    try:
-        #raise ConnectionFailure  # debug delete me
-        client = MongoClient()
-        client.admin.command('ismaster')
-        _backend = MongoBackend(dbname=dbname)
-    except ConnectionFailure:
-        _backend = MockMongoBackend(dbname=dbname)
-    _backend.drop()
-    return _backend
-
-def tearDownBackend(_backend):
-    dbname = _backend.database.name
-    _backend.database.client.drop_database(dbname)
-    
-
-
-
-
-
 def make_test_data():
 
-    builtins.ident_records = 20
-    builtins.backend_records = 9
+    builtins.ident_records = 24
+    builtins.backend_records = 10
     builtins.numb_events = 3
     builtins.numb_att_sets = 3
-    builtins.numb_users = 3
+    builtins.numb_users = 4
     builtins.numb_orgs = 2
-
-    b_db_name = "tahoe_db"
-    b_c_name = "e3010ec9-e2b8-4273-af46-d7a0a82af95d"
-    i_db_name = "identity_db"
-    i_c_name = "b27d7fd0-832a-4a74-b7e9-1a7b7b86860f"
-
-    mongo_backend = MongoBackend(mongo_url="mongodb://localhost", dbname=b_db_name, collname=b_c_name)
-    identity_backend = IdentityBackend(mongo_url="mongodb://localhost", dbname=i_db_name, collname=i_c_name)
-    Instance._backend = mongo_backend
-    Identity._backend = identity_backend
-
-    mongo_backend.drop()
-    identity_backend.drop()
-
-    DAM_backend = DAM.DAM(identity_backend,mongo_url="mongodb://localhost", dbname=b_db_name, collname=b_c_name)
 
     builtins.u1 = User('user1@example.com', 'pass1', 'User 1')
     builtins.u2 = User('user2@example.com', 'pass2', 'User 2')
     builtins.u3 = User('user3@example.com', 'pass3', 'User 3')
-
+    ru = User('user4@example.com', 'pass4', 'User 4')
 
     builtins.o1 = Org("org of user1",[u1, u2],[u1],"u1_Org")
     builtins.o2 = Org("org of user2",[u3, u2],[u2],"u2_Org")
 
     builtins.o1d = o1._backend.find_one({'_hash': o1._hash})
     builtins.o2d = o2._backend.find_one({'_hash': o2._hash})
-
 
     builtins.att1 = Attribute("domain", "dns1.cloudflare.com")
     builtins.att2 = Attribute("ip", "1.1.1.1")
@@ -159,9 +148,6 @@ def make_test_data():
     d2 = [att3,att4]
     d3 = [att5,att6]
 
-    # builtins.d1 = {att1,att2}
-    # builtins.d2 = {att3,att4}
-    # builtins.d3 = {att5,att6}
 
     builtins.event_by_org1 = Event("sighting",d1, o1._hash, time.time())
     builtins.event_by_org2 = Event("sighting",d2, o2._hash, time.time())
@@ -170,37 +156,24 @@ def make_test_data():
     query = {'itype': 'event'}
     query2 = {}
 
-    filt = {"_id":0}#, "timestamp":0}
+    filt = {"_id":0}
 
-    print("not passthrough")
-    builtins.r_control = [item for item in Instance._backend.find(query,filt)]
-    builtins.r1 = [item for item in DAM_backend.find(u1,query,filt)]
-    print("len r1:", len(r1))
-    builtins.r2 = [item for item in DAM_backend.find(u2,query,filt)]
-    builtins.r3 = [item for item in DAM_backend.find(u3,query,filt)]
-    builtins.r4 = [item for item in DAM_backend.find("RANDOM_USER",query,filt)]
-
-    print("passthrough:", DAM_backend.database.name)
-
-    builtins.r_control_all = [item for item in Instance._backend.find(query2,filt)]
-    builtins.r1_p = [item for item in DAM_backend.find(u1,query2,filt)]
-    builtins.r2_p = [item for item in DAM_backend.find(u2,query2,filt)]
-    builtins.r3_p = [item for item in DAM_backend.find(u3,query2,filt)]
-    builtins.r4_p = [item for item in DAM_backend.find("RANDOM_USER",query2,filt)]
-
-
-    # builtins.aon = Attribute('orgname', 'unr')
-    # builtins.an = Attribute('name', 'University of Nevada Reno')
-    # builtins.oadm = Object('admin', u1)
-
-    # builtins.ae = Attribute('email_addr', 'user1@example.com')
-
-    # hashed_pass = hashlib.sha256('Abcd1234'.encode('utf-8')).hexdigest()
-    # builtins.ap = Attribute('password', hashed_pass)
-
-    # builtins.aun = Attribute('name', 'User 1')
+    dam = Instance._backend
     
+    builtins.r_control = list(_backend.find(query,filt))
+    builtins.r1 = [i for i in dam.find(query,filt,user=u1)]
+    builtins.r2 = [i for i in dam.find(query,filt,user=u2)]
+    builtins.r3 = [i for i in dam.find(query,filt,user=u3)]
+    builtins.r4 = [i for i in dam.find(query,filt,user=ru._hash)]
 
+
+    builtins.r_control_all = list(_backend.find(query2,filt))
+    builtins.r1_p = [item for item in dam.find(query2,filt,user=u1)]
+    builtins.r2_p = [item for item in dam.find(query2,filt,user=u2)]
+    builtins.r3_p = [item for item in dam.find(query2,filt,user=u3)]
+    builtins.r4_p = [item for item in dam.find(query2,filt,user=ru._hash)]
+
+    
 def delete_test_data():
     del builtins.u1, builtins.u2, builtins.u3, \
         builtins.o1, builtins.o2, builtins.o1d, builtins.o2d, \
@@ -210,38 +183,11 @@ def delete_test_data():
         builtins.r_control_all, builtins.r1_p, builtins.r2_p, builtins.r3_p, builtins.r4_p
 
 
-# def setUpModule():
-#     _backend = setUpBackend()
-#     Instance.set_backend(_backend)
 
-#     assert User._backend is Identity._backend
-#     assert Org._backend is Identity._backend
-#     assert isinstance(Org._backend, (IdentityBackend, MockIdentityBackend))
-    
-
-def tearDownModule():
-    # tearDownBackend(Instance._backend)
-    # tearDownBackend(Identity._backend)
-    pass
 
 class InitTest(unittest.TestCase):
     @classmethod
-    def setUpClass(cls):
-        # mongo_backend = setUpBackend()
-        # identity_backend = setUpIdentBackend()
-
-        # Instance._backend = mongo_backend
-        # Identity._backend = identity_backend
-
-        # Instance._backend.drop()
-        # Identity._backend.drop()
-
-        # assert User._backend is Identity._backend
-        # assert Org._backend is Identity._backend
-        # assert isinstance(Org._backend, (IdentityBackend, MockIdentityBackend))
-
-        # assert Identity._backend is not Instance._backend
-       
+    def setUpClass(cls):       
         make_test_data()
 
     @classmethod
@@ -249,7 +195,7 @@ class InitTest(unittest.TestCase):
         delete_test_data()
         
         
-    def test_init(self):
+    def test_01_init(self):
         self.assertIsNotNone(o1d)
         self.assertIsNotNone(o2d)
 
@@ -260,7 +206,7 @@ class InitTest(unittest.TestCase):
         ident_backend = Identity._backend
         back_backend = Instance._backend
 
-        total_c_i = ident_backend.count_documents({},{})
+        total_c_i = ident_backend.count_documents({})
 
         email_c = ident_backend.count_documents({"itype":"attribute", "sub_type":"email_addr"})
         password_c = ident_backend.count_documents({"itype":"attribute", "sub_type":"password"})

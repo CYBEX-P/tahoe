@@ -13,6 +13,8 @@ def parse(instance, backend, validate=True):
         instance = json.loads(instance)
         
     instance.pop("_id", None)
+##    Try passing NoBackend below
+##    t = object()
     t = ITYPE_CLASS_MAP['attribute']['default']('mock', 'mock')
     t.__dict__ = instance
 
