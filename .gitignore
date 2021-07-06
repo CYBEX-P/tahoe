@@ -110,3 +110,7 @@ ENV/
 
 # mypy
 .mypy_cache/
+
+
+# built documentation
+docs/build/
