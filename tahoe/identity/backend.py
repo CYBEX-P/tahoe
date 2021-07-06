@@ -180,7 +180,7 @@ class _IdentityBackendBase():
         r : list
             A list of input configs (each config as a dictionary).
         """
-        
+
         ae = tahoe.Attribute('enabled', enabled)
         
         q = {'sub_type': 'cybexp_input_config', '_cref': {'$eq': ae._hash}}
@@ -202,6 +202,7 @@ class _IdentityBackendBase():
         
         r = self.find(q, {'_id': 0})
         return list(r)
+
 
     def org_exists(self, orgname):
         """
@@ -272,5 +273,6 @@ class MockIdentityBackend(tahoe.backend.MockMongoBackend, _IdentityBackendBase):
     def __init__(self, mongo_url=None, dbname="identity_db",
                  collname="instance", create=False, **kwargs):
         super().__init__(mongo_url, dbname, collname, create, **kwargs)
+
 
 

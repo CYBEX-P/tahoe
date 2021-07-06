@@ -3,9 +3,24 @@ ITYPE_CLASS_MAP = {'str': {'default':str}}
 
 def parse(instance, backend, validate=True):
     """
-    Validate if data is actually in backend.
-    """
+    Parses the JSON string or dict into Python object.
+
+    Parameters
+    ----------
+    instance: json dict object
+        Contains unparsed Tahoe object instance
+    backend: string
+        the backend identity/location for where the tahoe object will
+        go to
     
+    Returns
+    -------
+    t: dict
+        a parsed tahoe object dictionary with the corresponding itype
+        and sub_type representation
+
+    """
+
     if instance is None:
         return None
     
@@ -56,6 +71,29 @@ def _create_itype_class_map():
     ITYPE_CLASS_MAP['user'] = {'default': User}
 
 def getclass(itype, sub_type='default'):
+    """
+    Utility function that returns a variable 'class_' containing the itype and sub_type values from 'ITYPE_CLASS_MAP'.
+    This function is used to ensure there is dictionary key errors behind the call. Otherwise the the sub_type is set
+    to 'default'.
+
+    Parameters
+    ----------
+    itype: str
+        the itype of the ITYPE_CLASS_MAP dict
+    sub_type:
+        the sub_type of the ITYPE_CLASS_MAP dict
+    
+    Raises
+    ------
+    KeyError:
+        Invalid key value pulled from ITYPE_CLASS_MAP, set the the sub_type value to 'default'.
+
+    Returns
+    -------
+    class_: dict
+        the class representation with the itype and sub_type
+
+    """
     global ITYPE_CLASS_MAP
     try:
         class_ = ITYPE_CLASS_MAP[itype][sub_type]

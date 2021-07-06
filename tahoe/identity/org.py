@@ -19,6 +19,9 @@ _P = {'_id': 0}
 
 
 class Org(Identity):
+    """
+    Org handles and manages the organization information. 
+    """
     def __init__(self, orgname, user, admin, name='', **kwargs):
         """
         Creates an Org with specified orgname.

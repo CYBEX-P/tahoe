@@ -119,6 +119,8 @@ class Instance():
         return branch(d)
 
     def delete(self, delete_children=True):
+        """Deletes this instance and all children."""
+
         r = self._backend.find_one({'_ref': self._hash}, {**_P, '_hash': 1})
         if r:
             raise DependencyError(f"referred in {r['_hash']}")
@@ -157,6 +159,34 @@ class Instance():
 
     def related(self, itype='all', level=1, p=_P, start=0, end=0,
             limit=0, skip=0, page=1, category='all', context='all'):
+        """
+        Pulls all the attributes and objects connected to the event. 
+        All retrieves other events that are connected to it through 
+        a common session. If the function is called for an attribute,
+        object, or session, this function retrieves all the events
+        connect to it.
+
+        Parameters
+        ----------
+        itype: string
+            the itype of the Tahoe instance used to call this function
+            Default: 'all'
+        level: int
+
+        p: dict
+            the projection of the database query
+            Default: '_P' or whatever is the default id
+        start: int/float
+
+        end: int/float
+
+        limit: int
+
+        skip: int
+
+        page: int
+
+        """
 
         if not isinstance(level, int):
             raise TypeError(f"Expected type(level)='int' got '{type(level)}'!")
@@ -180,6 +210,10 @@ class Instance():
         
     def related_hash(self, level=0, visited=None, start=0, end=0,
             limit=0, skip=0, page=1, category='all', context='all'):
+        """
+        Retrieves and returns all the related hashes corresponding to
+        the object that was called in the 'related' function.
+        """
 
         if visited is None:
             visited = set()
@@ -229,6 +263,10 @@ class Instance():
         Updates fields of a TAHOE instance in both
         backend and Python object.
 
+        Parameters
+        ----------
+        update: bool
+
         Warning
         -------
         Does not update `_hash` or `_ref`.
@@ -255,6 +293,9 @@ class Instance():
     # Methods to validate common function parameters
 
     def _validate_param(self, **kwargs):
+        """
+        Asserts that the items of the arguments passed are of the correct datatype.
+        """
         for k, v in kwargs.items():
             if k == '_backend':
                 if not isinstance(v, Backend):
@@ -408,6 +449,24 @@ class OES(Instance):
         """
         Note, data is a list of Attribute, Object; whereas prev_data
         is a dict (json object). add_instance() uses prev_data.
+
+        Utility function to pull the data from that was used to initialize an OES object. Creates a default dictionary 
+        in list format to hold sub_types and their corresponding data.  'data' is then iterated through and its values
+        are pulled and stored in the default dictionary. When finished with 'data', that dictionary with the pulled 
+        data values is then returned.
+
+        Parameters
+        ----------
+        data: list of attributes or object
+            contains the data sets for a Tahoe object, event, or session
+        prev_data: dict json object
+            the previous data set before the set of data that is going to be appended
+            
+        Returns
+        -------
+        d: dictionary
+            dictionary containing the data pulled from 'data'. The sub_types and their data.    
+
         """
         
         d = defaultdict(list)
@@ -436,6 +495,33 @@ class OES(Instance):
         return self._validate_instance(data, ['attribute', 'object'])
 
     def _validate_instance(self, instance, type_list):
+        """
+        Ensures the the passed instance is valid by ensuring that the passed variables within 'instance'
+        are of the type they are by comparing them to the type_list.
+
+        Parameters
+        ----------
+        instance: a dictionary of string values
+            the key value of this function. Items in here will be tested for correct datatype corresponding
+            to type_list.
+        type_list: list of strings
+            the variable names and their corresponding datatypes that will be used to ensure the datatype
+            of the values in instance are correct.
+
+        Raises
+        ------
+        ValueError:
+            'instance' is empty
+        TypeError:
+            the current iteration of data in 'instance' is either not of type tahoe or not a type 
+            that is in the passed type_list.
+        
+        Returns
+        -------
+        instance: List 
+            set list of the instance object 
+
+        """
         type_list = [getclass(t) for t in type_list]
         
         if not isinstance(instance, list):
