@@ -7,8 +7,6 @@
 Welcome to Tahoe's documentation!
 =================================
 
-..
-.. include:: usage.rst
 
 .. Tahoe Modules:
    ----------------
