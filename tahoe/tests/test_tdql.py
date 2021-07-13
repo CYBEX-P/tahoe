@@ -20,6 +20,7 @@ def setUpModule():
     _backend = MongoBackendTest.setUpClass()
     Instance.set_backend(_backend)
     Attribute.set_backend(_backend)
+    Object.set_backend(_backend)
 
     assert Attribute._backend is Instance._backend
     assert Object._backend is Instance._backend

@@ -16,7 +16,7 @@ from tahoe.identity.backend import *
 def setUpBackend():
     from pymongo import MongoClient
     from pymongo.errors import ConnectionFailure
-    dbname = "1ef0534d-6ef7-4624-84c2-7bf59f1b3927"
+    dbname = "4485bbf5-a2bc-4a32-b6b6-b1949e8373fe"
     try:
         raise ConnectionFailure  # debug delete me
         client = MongoClient()
@@ -47,22 +47,22 @@ class IdentityBackendTest(unittest.TestCase):
         if isinstance(self._backend, MockIdentityBackend):
             EQ(repr(self._backend), "MockMongoBackend(" +
                 "'mongodb://localhost:27017'," + 
-                " '1ef0534d-6ef7-4624-84c2-7bf59f1b3927', 'instance')")
+                " '4485bbf5-a2bc-4a32-b6b6-b1949e8373fe', 'instance')")
         elif isinstance(self._backend, IdentityMongoBackend):
             EQ(repr(self._backend), "MongoBackend(" +
                 "'mongodb://localhost:27017'," + 
-                " '1ef0534d-6ef7-4624-84c2-7bf59f1b3927', 'instance')")
+                " '4485bbf5-a2bc-4a32-b6b6-b1949e8373fe', 'instance')")
 
     def test02_str(self):
         EQ = self.assertEqual
         if isinstance(self._backend, MockIdentityBackend):
             EQ(repr(self._backend), "MockMongoBackend(" +
                 "'mongodb://localhost:27017'," + 
-                " '1ef0534d-6ef7-4624-84c2-7bf59f1b3927', 'instance')")
+                " '4485bbf5-a2bc-4a32-b6b6-b1949e8373fe', 'instance')")
         elif isinstance(self._backend, IdentityBackend):
             EQ(repr(self._backend), "MongoBackend(" +
                 "'mongodb://localhost:27017'," + 
-                " '1ef0534d-6ef7-4624-84c2-7bf59f1b3927', 'instance')")
+                " '4485bbf5-a2bc-4a32-b6b6-b1949e8373fe', 'instance')")
 
     def test03_find(self):
         rr = self._backend.find({})

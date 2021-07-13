@@ -5,7 +5,7 @@ import pdb
 from pprint import pprint
 import unittest
 
-if __name__ != 'tahoe.tests.identity.test_org':
+if __name__ != 'tahoe.tests.test_backend':
     import sys, os
     J = os.path.join
     sys.path = ['..', J('..','..')] + sys.path
@@ -14,6 +14,25 @@ if __name__ != 'tahoe.tests.identity.test_org':
 from tahoe import Attribute
 from tahoe.backend import *
 
+
+def setUpBackend():
+    from pymongo import MongoClient
+    from pymongo.errors import ConnectionFailure
+    dbname = "1ef0534d-6ef7-4624-84c2-7bf59f1b3927"
+    try:
+        client = MongoClient()
+        client.admin.command('ismaster')
+        _backend = MongoBackend(dbname=dbname)
+    except ConnectionFailure:
+        _backend = MockMongoBackend(dbname=dbname)
+    _backend.drop()
+    return _backend
+
+
+def tearDownBackend(_backend):
+    dbname = _backend.database.name
+    _backend.database.client.drop_database(dbname)
+    
 
 class NoBackendTest(unittest.TestCase):
     pass
@@ -30,7 +49,7 @@ class MongoBackendTest(unittest.TestCase):
         dbname = dbname + "1ef0534d-6ef7-4624-84c2-7bf59f1b3927"
 
         try:
-            raise ConnectionFailure
+##            raise ConnectionFailure
             client = MongoClient()
             client.admin.command('ismaster')
             
