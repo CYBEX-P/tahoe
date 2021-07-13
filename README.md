@@ -4,7 +4,7 @@
 
 Any CIS platform like [CYBEX-P](https://github.com/cybex-p) potentially handles hundreds of different data formats. Thus, it needs a standard data format and structure to represent threat data. Examples of threat data are email, firewall logs, malware signatures, file hashes etc. A cyberthreat language (CTL) is a specification of how to format and serialize any kind of threat data. CYBEX-P uses TAHOE instead of other CTLs like [STIX](https://oasis-open.github.io/cti-documentation/) or [MISP](https://github.com/MISP/misp-rfc). TAHOE structures threat data as JSON documents.
 
-This repository is a Python library that should be used to structure any threat data in TAHOE format.
+This repository is a Python library that should be used to structure any threat data in TAHOE format. Find the complete TAHOE specification in ```/specification```. The documentation is in ```/docs```.
 
 
 ## Installation
