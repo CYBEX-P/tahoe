@@ -1,5 +1,61 @@
 ![unittests](https://github.com/CYBEX-P/tahoe/workflows/unittests/badge.svg)
 
+# TAHOE — A Cyberthreat Language
+
+Any CIS platform like [CYBEX-P](https://github.com/cybex-p) potentially handles hundreds of different data formats. Thus, it needs a standard data format and structure to represent threat data. A cyberthreat language (CTL) is a specification of how to format and serialize any kind of threat data. CYBEX-P uses TAHOE instead of other CTLs like [STIX](https://oasis-open.github.io/cti-documentation/) or [MISP](https://github.com/MISP/misp-rfc). TAHOE structures threat data as JSON documents.
+
+
+## TAHOE Data Instance
+
+A piece of TAHOE data is called an instance and there are 5 types of TAHOE instances —
+
+1.  **Raw** A data instance stores unprocessed user data.
+
+2.  **Attribute** The most basic datatype that holds a single piece of
+    information, like an IP address.
+
+3.  **Object** Groups several attributes or other objects together, e.g., a file may have a filename attribute and a file-size attribute.
+
+4.  **Event** An event consists of one or more attributes or objects along with a timestamp. Events structure attributes or objects into complete threat data. 
+
+5.  **Session** A session groups arbitrarily related events. (e.g. events when a user visits a website).
+
+
+## Installation
+
+1. Download & install [Python 3.9.x](https://www.python.org/downloads/).
+
+2. Create and activate Python virtual environment [(official documentation)](https://docs.python.org/3/library/venv.html). \
+Create: ```python -m venv myenv``` \
+Activate in *Ubuntu*: ```source myenv/bin/activate``` \
+Activate in *Windows*: ```source myenv/Scripts/activate```
+
+3. Download the files from the TAHOE repository.
+```
+git clone https://github.com/CYBEX-P/tahoe
+```
+
+4. Install
+```
+cd tahoe
+python setup.py install
+```
+
+5. Unittest
+```
+python -m unittest
+```
+
+
+
+
+
+
+
+
+
+
+
 ```
 python setup.py sdist
 pip install dist/tahoe

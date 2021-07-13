@@ -145,7 +145,7 @@ class MockDAM(_DAMBase, tahoe.backend.MockMongoBackend):
         """
         Parameters
         ----------
-        _identity_backend = tahoe.identity.IdentityBackend (optional)
+        _identity_backend : tahoe.identity.IdentityBackend (optional)
             Where users, orgs, _acls are stored. This backend is used
             to pull user_acl for access control.
 
