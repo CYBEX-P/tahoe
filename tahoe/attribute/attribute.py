@@ -167,7 +167,7 @@ class Attribute(tahoe.Instance):
         -------
         count : int
         """
-        
+
         self._validate_param(start=start, end=end)
 
         q = {"itype": "event", **dtresolve(start, end)}
@@ -188,7 +188,7 @@ class Attribute(tahoe.Instance):
         kwargs = {}
         if limit:
             kwargs['limit'] = limit
-        
+
         return self._backend.count_documents(q, **kwargs)
 
     def degree(self, itype='all'):
@@ -248,7 +248,7 @@ class Attribute(tahoe.Instance):
         if context == 'unknown':
             q['_ben_ref'] = {'$ne': self._hash}
             q['_mal_ref'] = {'$ne': self._hash}
-            
+
         return self._backend.find(q, p, **limitskip(limit, skip, page))
 
 
@@ -261,7 +261,7 @@ class Attribute(tahoe.Instance):
         elif summary:
             itype = 'attribute'
 
-        related, page, next_page = super().related(itype, level, p, start, end,
+        rel, page, next_page = super().related(itype, level, p, start, end,
                                         limit, skip, page, category, context)
 
         if summary_graph:
@@ -269,7 +269,7 @@ class Attribute(tahoe.Instance):
             label_mapping = {}
             attribute_data_mapping = {}
             G = nx.Graph()
-            for i in related:
+            for i in rel:
                 h = i['_hash']
                 itype = i['itype']
                 sub_type = i['sub_type']
@@ -290,16 +290,16 @@ class Attribute(tahoe.Instance):
                 except KeyError:
                     pass
 
-            related = dict(result)
+            rel = dict(result)
             
         elif summary:
             result = defaultdict(list)
-            for i in related:
+            for i in rel:
                 if i['itype'] == 'attribute':
                     result[i['sub_type']].append(i['data'])
-            related = dict(result)
+            rel = dict(result)
 
-        return related, page, next_page
+        return rel, page, next_page
 
 
     # Protected & Private Methods in alphabetical order
