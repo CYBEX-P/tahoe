@@ -30,22 +30,22 @@ class Backend:
 
     def __repr__(self):
         return 'Backend()'
-    
+
     def aggregate(self, *args, **kwargs):
         return NotImplementedError
-    
+
     def find(self, *args, **kwargs):
         return NotImplementedError
-    
+
     def find_one(self, *args, **kwargs):
         return NotImplementedError
-    
+
     def insert_one(self, *args, **kwargs):
         return NotImplementedError
-    
+
     def update_one(self, *args, **kwargs):
         return NotImplementedError
-    
+
     def update_many(self, *args, **kwargs):
         return NotImplementedError
 
@@ -87,7 +87,7 @@ class NoBackend(Backend):
         return None
 
 
-class _MongoBackendBase(Backend):    
+class _MongoBackendBase(Backend):
 
     def find_attribute(self, sub_type, data, p=_P, parse=False):
         """
@@ -123,41 +123,46 @@ class _MongoBackendBase(Backend):
         if parse:
             r = tahoe.parse(r, backend=self, validate=False)
         return r
-        
     
 
 class MongoBackend(pymongo.collection.Collection, _MongoBackendBase):
-   """Inherits everything from pymongo.collection.Collection."""
+    """Inherits everything from pymongo.collection.Collection."""
    
-   def __init__(self, mongo_url=None, dbname="tahoe_db",
+    def __init__(self, mongo_url=None, dbname="tahoe_db",
                 collname="instance", create=False, **kwargs):
-       client = MongoClient(mongo_url, connect=False)
-       db = client.get_database(dbname)
-       _MongoBackendBase.__init__(self)
-       Collection.__init__(self, db, collname,  create, **kwargs)
+        if mongo_url is None:
+            self.mongo_url = 'mongodb://localhost:27017'
+        else:
+            self.mongo_url = mongo_url # used by DamBackend
+        
+        client = MongoClient(mongo_url, connect=False)
+        db = client.get_database(dbname)
+        Collection.__init__(self, db, collname, create, **kwargs)
 
-   def __repr__(self):
-       host, port = self.database.client.address
-       dbname = self.database.name
-       collname = self.name
-       return f"MongoBackend('mongodb://{host}:{port}', " \
-            f"'{dbname}', '{collname}')"
+    def __repr__(self):
+        mongo_url = self.mongo_url 
+        dbname = self.database.name
+        collname = self.name
+        return f"MongoBackend('{mongo_url}', '{dbname}', '{collname}')"
 
 
 class MockMongoBackend(mongomock.Collection, _MongoBackendBase):
-   def __init__(self, mongo_url=None, dbname="tahoe_db",
+    def __init__(self, mongo_url=None, dbname="tahoe_db",
                 collname="instance", create=False, **kwargs):
-       client = mongomock.MongoClient(mongo_url)
-       db = client.get_database(dbname)
-       _MongoBackendBase.__init__(self)
-       mongomock.Collection.__init__(self, db, collname, db._store)
+        if mongo_url is None:
+            self.mongo_url = 'mongodb://localhost:27017'
+        else:
+            self.mongo_url = mongo_url # used by DamBackend
+            
+        client = mongomock.MongoClient(mongo_url)
+        db = client.get_database(dbname)
+        mongomock.Collection.__init__(self, db, collname, db._store)
 
-   def __repr__(self):
-       host, port = self.database.client.address
-       dbname = self.database.name
-       collname = self.name
-       return f"MockMongoBackend('mongodb://{host}:{port}', " \
-            f"'{dbname}', '{collname}')"
+    def __repr__(self):
+        mongo_url = self.mongo_url
+        dbname = self.database.name
+        collname = self.name
+        return f"MockMongoBackend('{mongo_url}', '{dbname}', '{collname}')"
 
 
 

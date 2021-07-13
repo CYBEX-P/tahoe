@@ -11,7 +11,7 @@ setuptools.setup(
     version="0.8.0",
     author="Farhan Sadique",
     author_email="qclass@protonmail.com",
-    description="TAHOE -- A CyberThreat Language (CTL)",
+    description="TAHOE - A CyberThreat Language (CTL)",
     long_description=long_description,
     long_description_content_type="text/markdown",
     url="https://github.com/cybex-p/tahoe",
@@ -36,7 +36,7 @@ setuptools.setup(
 ##        ])
     ],
     classifiers=[
-        "Programming Language :: Python :: 3.8.x",
+        "Programming Language :: Python :: 3.9",
     ],
     install_requires = [
         "pymongo",

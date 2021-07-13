@@ -204,9 +204,9 @@ class Instance():
         if itype != 'all':
             q.update({"itype": itype})
 
-        related = [i for i in self._backend.find(q, p)]
+        rel = [i for i in self._backend.find(q, p)]
  
-        return related, page, page+1
+        return rel, page, page+1
         
     def related_hash(self, level=0, visited=None, start=0, end=0,
             limit=0, skip=0, page=1, category='all', context='all'):
@@ -238,6 +238,7 @@ class Instance():
             E = parse(e, self._backend, validate=False)
             this_rel_hash = E.related_hash(level-1, visited)
             all_rel_hash.update(this_rel_hash)
+
         return list(all_rel_hash)
 
     @classmethod
