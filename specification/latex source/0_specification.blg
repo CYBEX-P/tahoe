@@ -1,0 +1,66 @@
+This is BibTeX, Version 0.99d
+Capacity: max_strings=200000, hash_size=200000, hash_prime=170003
+The top-level auxiliary file: 0_specification.aux
+Reallocating 'name_of_file' (item size: 1) to 21 items.
+The style file: ACM-Reference-Format.bst
+Reallocating 'name_of_file' (item size: 1) to 9 items.
+Reallocating 'singl_function' (item size: 4) to 100 items.
+Reallocating 'singl_function' (item size: 4) to 100 items.
+Reallocating 'wiz_functions' (item size: 4) to 6000 items.
+Database file #1: refs.bib
+You're missing a field name---line 191 of file refs.bib
+ :   
+ :   %%pages={797--812},
+(Error may have been on previous line)
+I'm skipping whatever remains of this entry
+Reallocating 'singl_function' (item size: 4) to 100 items.
+Reallocating 'glb_str_end' (item size: 4) to 20 items.
+Reallocating 'glb_str_ptr' (item size: 4) to 20 items.
+Reallocating 'global_strs' (item size: 1) to 4000000 items.
+Reallocating 'singl_function' (item size: 4) to 100 items.
+Warning--empty address in banker2011mongodb
+Warning--no journal in bray2014javascript
+Warning--no number and no volume in bray2014javascript
+Warning--page numbers missing in both pages and numpages fields in bray2014javascript
+You've used 5 entries,
+            5945 wiz_defined-function locations,
+            1359 strings with 15352 characters,
+and the built_in function-call counts, 4397 in all, are:
+= -- 518
+> -- 118
+< -- 1
++ -- 35
+- -- 48
+* -- 267
+:= -- 486
+add.period$ -- 28
+call.type$ -- 5
+change.case$ -- 26
+chr.to.int$ -- 5
+cite$ -- 9
+duplicate$ -- 406
+empty$ -- 289
+format.name$ -- 52
+if$ -- 983
+int.to.chr$ -- 2
+int.to.str$ -- 1
+missing$ -- 10
+newline$ -- 86
+num.names$ -- 40
+pop$ -- 137
+preamble$ -- 1
+purify$ -- 71
+quote$ -- 0
+skip$ -- 141
+stack$ -- 0
+substring$ -- 315
+swap$ -- 33
+text.length$ -- 1
+text.prefix$ -- 0
+top$ -- 0
+type$ -- 107
+warning$ -- 4
+while$ -- 43
+width$ -- 0
+write$ -- 129
+(There was 1 error message)

@@ -1,0 +1,62 @@
+\documentclass[10pt]{article}
+
+%% Layout and fonts
+\usepackage[a4paper, total={6.5in, 9in}]{geometry}
+\usepackage[T1]{fontenc}
+\usepackage{babel}
+\usepackage{kpfonts}
+\usepackage{xcolor}
+
+\usepackage{url} % line break hyphenate
+\usepackage[htt]{hyphenat} % line break hyphenate
+%\usepackage{enumitem}
+
+%% Figures
+\usepackage{graphicx}
+\usepackage{caption}
+\usepackage{subcaption}
+\renewcommand{\figurename}{Fig.}
+\graphicspath{{image/}}
+
+\usepackage{fancyvrb} % Bverbatim in Fig.
+
+\usepackage[page,toc,titletoc,title]{appendix} % appendix
+
+\usepackage[square,numbers]{natbib} % bibliography
+
+\usepackage{algorithm2e} % Pseudocode
+
+\newcommand{\T}[1]{\texttt{#1}}
+
+\usepackage{scalerel}
+\newcommand {\inlinefig}[1] {\scalerel*{\includegraphics{#1}}{|}}
+
+
+\title{ \textbf{TAHOE -- A Cyberthreat Language} }
+
+\author{Farhan Sadique}
+
+\begin{document}
+
+\sloppy
+
+\maketitle
+
+\tableofcontents
+
+\pagebreak
+
+\input{1_tahoe}
+\input{2_threatrank}
+\input{3_datagov}
+
+
+%\begin{appendices}
+%    \input{appendix/tahoe}
+%\end{appendices}
+
+\bibliographystyle{ACM-Reference-Format}
+\bibliography{refs.bib}
+
+\end{document}
+\endinput

@@ -1,0 +1,129 @@
+
+\section{ThreatRank to Detect Malicious Events}\label{sec:pagerank}
+
+%a modified PageRank \cite{page1997pagerank}
+
+Earlier in subsection \ref{ss:fcorr} we introduced how TAHOE intrinsically correlates data. Here, we extend upon it by formulating  an algorithm, called ThreatRank, to assign a malicious score to each \texttt{event} in a TAHOE database. The score essentially sorts the \texttt{events} from most malicious to least malicious. In \ref{ss:respage} we justify this algorithm with real data.
+
+
+
+\iffalse
+
+% It helps out the security administrator because it is impossible to manually analyze all \texttt{events} (e.g. all firewall logs) in a regular network. Because of the assigned score, the security administrator can start from the \texttt{event} that is most likely to be malicious. In this section we discuss how we assign the score to each \texttt{event}.
+
+\subsection{Attributes in a Malicious Context}
+
+While a malicious \texttt{event} (e.g. a spam email) stays malicious for eternity, the same is not true for \texttt{attributes}. For example, a website can be hacked and used to distribute malware for a week; after which it is restored by the website admin. Here, the website \texttt{URL attribute} is malicious for a week and becomes benign afterwards.
+
+Similarly, not all \texttt{attributes} of a malicious \texttt{event} are malicious. For example, if X receives a spam email from Y, only Y is a malicious \texttt{attribute} not X. X is the victim and a benign \texttt{attribute} in this \texttt{event}.
+
+For these reasons, TAHOE never classifies an \texttt{attribute} (e.g. an IP) as malicious. Rather TAHOE maintains a special edge, called a \texttt{\_mal\_ref} between an \texttt{event} and an \texttt{attribute}. For example, if an IP \texttt{1.1.1.1} is seen in a malicious context in a firewall log \texttt{event}, the IP is connected by a \texttt{\_mal\_ref} with the log \texttt{event}.
+
+As a result, TAHOE can count the number of times a particular \texttt{attribute} has been seen in a malicious context vs in a benign context. Furthermore, we utilize this notion to formulate the ThreatRank algorithm below.
+
+
+\subsection{ThreatRank Algorithm}
+
+\fi
+
+Consider, $\mathbb{A} = \{a_1$, $a_2$, ..., $a_m\}$ is the set of all \texttt{attributes} and $\mathbb E = {e_1, e_2, ..., e_n}$ is the set of all \texttt{events}. $\mathbb E_{mal} \subseteq \mathbb E$ is the set of known malicious \texttt{events}. We define $\mathbb I_{mal} = \{k ~ | ~ e_k \in \mathbb E_{mal}\}$. We want to determine the ThreatRank (TR) of a new \texttt{event} $e_p$.
+
+We define $w_{i,j} = \{e_i, ..., a_x, e_y, a_z ..., e_p\}$ as the $j^{th}$ path from $e_i$ to $e_p$. Note that, the path encounters \texttt{attributes} and \texttt{events} in an alternating fashion and has distinct nodes.
+
+Then the contribution of $w_{i,j}$ to the ThreatRank of $e_p$ is calculated using the recurrence equation---
+
+\begin{equation}\label{eq:trwij}
+	TR_{w_{i,j}}[k] = 0.998^{d_{k-1}}  \times \frac{ TR_{w_{i,j}}[k-1] }{L( w_{i,j}[k-1] )}
+\end{equation}
+
+where, $TR_{w_{i,j}}[1] = -1$; $d_k = 0$ for an \texttt{attribute} and for an \texttt{event}, $d_k$ is the number of days passed since the \texttt{event} $e_k$ was recorded; $L(x)$ is the degree of node $x$.
+
+Assume, there are $t_i$ paths from $e_i$ to $e_p$. We define the set $\mathbb W = \{w_{i,j} ~ | ~ i \in \mathbb I_{mal}; j \in [1,t_i]\}$. $\mathbb W$ basically includes all the paths from all known malicious \texttt{events} to the new \texttt{event}. The total ThreatRank of $e_p$ is then calculated as ---
+
+\begin{equation}\label{eq:trep}
+	TR(e_p) = \sum_{w \in \mathbb W} TR_{w}[t_i]
+\end{equation}
+
+Algorithm \ref{algo:threatrank} lists the pseudocode for ThreatRank. The code is written using TAHOE terminology.
+
+
+\begin{algorithm}
+    \caption{ThreatRank}
+    \label{algo:threatrank}
+    \DontPrintSemicolon
+    \SetAlgoLined
+
+    \SetKwProg{Fn}{Function}{}{end}
+    \SetKwInOut{Input}{Input}
+
+    \Input{$\mathbb E, ~ \mathbb E_{mal}$}
+
+
+    \Fn{getRelated(node)} {
+        \If{node.type = ``event"} {return node.\_ref}
+        related $\gets$ []    \; % node.type = ``attribute''
+        \For{event in $\mathbb E$} {
+            \If {node in event.\_ref} {related.append(node)}
+        }
+
+        return related \;
+    }
+
+    \Fn{findPaths(src, dest, currentPath)} {
+        \If{src = dest} {return currentPath }
+
+        related $\gets$ getRelated(src) \;
+        paths $\gets$ [] \;
+
+        \For{r in related}{
+            \If  {r in currentPath} {continue}  %(breaks cycle)
+            paths.append(findPaths(r, dest, currentPath+[r])) \;
+        }
+        return paths \;
+    }
+
+
+    \Fn{threatRankPath(path)} {
+        tr $\gets$ $-1$ \;
+
+        \For{node in path} {
+            L $\gets$ degree(node) \;
+            d $\gets$ 0 \;
+            \If{node.type = ``event"} { d $\gets$ node.daysOld }
+            tr $\gets$ tr $\times$ 0.998**d $/$ L \;
+        }
+    return tr \;
+    }
+
+    \Fn{threatRank(newEvent)} {
+        allPaths $\gets$ [], ~~ TR $\gets$ 0 \;
+
+        \For{event in $\mathbb E_{mal}$} {
+            allPaths.append(findPaths(event, newEvent, []))
+        }
+        \For{path in allPaths} {
+            TR $\gets$ TR $+$ threatRankPath(path) \;
+        }
+        return TR \;
+    }
+
+
+\end{algorithm}
+
+
+
+\subsection{Why 0.998?}
+
+We multiply the ThreatRank of each \texttt{event} by $0.998^{d_k} $. Here, $d_k$ is the number of days passed since the \texttt{event} $e_k$ was recorded. The value $0.998$ is chosen such that after $1$ year an \texttt{event} is half as significant ($0.998^{365} = 0.48$) as a recent \texttt{event} ($0.998^0 = 1$). The same \texttt{event} is only one-fourth as significant ($0.998^{730} = 0.23$) after two years. However, the user can choose a different value of this factor between $0.00001$ and $1.0$. A larger value indicates that older events are more significant in calculating the ThreatRank.
+
+
+\subsection{Who Classifies Malicious Events \& Edges?}
+
+Malicious \texttt{events} or edges can be manually classified in three ways --- (1) by CYBEX-P admin after analysis (2) by user voting (3) automatically for some data. For example, an IP that tries to connect to a honeypot, is automatically classified as a malicious IP in this context.
+
+
+%\subsection{ThreatRank vs Degree Distribution}
+
+%Malicious score of an \texttt{event} can be calculated as the number of malicious edges connected to it; which is equivalent to its degree in the graph. However, an \texttt{attribute} that is seen in malicious context in an \texttt{event} may show up in benign context in thousands of other \texttt{events}. Such, an \texttt{attribute} should contribute less to the malicious score than another \texttt{attribute} which is present in malicious context in all \texttt{events}. ThreatRank takes this into consideration.
+
+

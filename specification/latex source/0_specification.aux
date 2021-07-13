@@ -1,0 +1,118 @@
+\relax 
+\providecommand\babel@aux[2]{}
+\@nameuse{bbl@beforestart}
+\providecommand \oddpage@label [2]{}
+\babel@aux{nil}{}
+\citation{barnum2012standardizing}
+\citation{dulaunoy-misp-core-format-13}
+\citation{bray2014javascript}
+\citation{sadique2021tahoe}
+\@writefile{toc}{\contentsline {section}{\numberline {1}TAHOE --- A Cyberthreat Language}{2}\protected@file@percent }
+\newlabel{sec:tahoe}{{1}{2}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {1.1}TAHOE Data Instance}{2}\protected@file@percent }
+\newlabel{ss:instance}{{1.1}{2}}
+\providecommand*\caption@xref[2]{\@setref\relax\@undefined{#1}}
+\newlabel{fig:aef}{{1a}{2}}
+\newlabel{sub@fig:aef}{{a}{2}}
+\newlabel{fig:anf}{{1b}{2}}
+\newlabel{sub@fig:anf}{{b}{2}}
+\newlabel{fig:aet}{{1c}{2}}
+\newlabel{sub@fig:aet}{{c}{2}}
+\newlabel{fig:ant}{{1d}{2}}
+\newlabel{sub@fig:ant}{{d}{2}}
+\newlabel{fig:asub}{{1e}{2}}
+\newlabel{sub@fig:asub}{{e}{2}}
+\newlabel{fig:tof}{{1f}{2}}
+\newlabel{sub@fig:tof}{{f}{2}}
+\newlabel{fig:tot}{{1g}{2}}
+\newlabel{sub@fig:tot}{{g}{2}}
+\newlabel{fig:te}{{1h}{2}}
+\newlabel{sub@fig:te}{{h}{2}}
+\@writefile{lof}{\contentsline {figure}{\numberline {1}{\ignorespaces An email event in TAHOE Format. The complete representation of the email consists of $8$ JSON documents. Each document is a node in the TAHOE graph. \texttt  {\_hash} is the globally reproducible and unique ID of a document. \texttt  {\_cref} stores the edges from objects and events to their children. \texttt  {\_ref} stores the edges to both children and grandchildren and so on. The graph is visualized in Fig. \ref  {fig:email_tahoe_graph}.\relax }}{2}\protected@file@percent }
+\newlabel{fig:email_tahoe}{{1}{2}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {1.2}Data Structured as Graphs}{2}\protected@file@percent }
+\newlabel{ss:graph}{{1.2}{2}}
+\newlabel{fig:email_tahoe_graph}{{2a}{3}}
+\newlabel{sub@fig:email_tahoe_graph}{{a}{3}}
+\newlabel{fig:email_tahoe_nested}{{2b}{3}}
+\newlabel{sub@fig:email_tahoe_nested}{{b}{3}}
+\newlabel{fig:email_tahoe_data}{{2c}{3}}
+\newlabel{sub@fig:email_tahoe_data}{{c}{3}}
+\@writefile{lof}{\contentsline {figure}{\numberline {2}{\ignorespaces The email event (green) from Fig. \ref  {fig:email_tahoe} as a TAHOE graph and a nested document of objects (red) and attributes (yellow).\relax }}{3}\protected@file@percent }
+\newlabel{fig:email_tahoe_repr}{{2}{3}}
+\@writefile{lof}{\contentsline {figure}{\numberline {3}{\ignorespaces Events grouped by arbitrary session parameter.\relax }}{3}\protected@file@percent }
+\newlabel{fig:session}{{3}{3}}
+\@writefile{toc}{\contentsline {paragraph}{\textbf  {Events Viewed as Nested Documents}}{3}\protected@file@percent }
+\citation{dulaunoy-misp-core-format-13}
+\citation{banker2011mongodb}
+\@writefile{toc}{\contentsline {subsection}{\numberline {1.3}Representing Complex Data -- TAHOE vs. MISP}{4}\protected@file@percent }
+\newlabel{ss:tahoeVmisp}{{1.3}{4}}
+\newlabel{fig:email_misp}{{4a}{4}}
+\newlabel{sub@fig:email_misp}{{a}{4}}
+\newlabel{fig:email_stix}{{4b}{4}}
+\newlabel{sub@fig:email_stix}{{b}{4}}
+\newlabel{fig:net_stix}{{4c}{4}}
+\newlabel{sub@fig:net_stix}{{c}{4}}
+\@writefile{lof}{\contentsline {figure}{\numberline {4}{\ignorespaces The email event from figures \ref  {fig:email_tahoe} and \ref  {fig:email_tahoe_repr} in MISP and STIX format and a network packet in STIX format.\relax }}{4}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {1.4}Indexing \& Scalability -- TAHOE vs. STIX}{4}\protected@file@percent }
+\newlabel{ss:tahoeVstix}{{1.4}{4}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {1.5}Intrinsic Correlation of Graphical Data}{5}\protected@file@percent }
+\newlabel{ss:fcorr}{{1.5}{5}}
+\@writefile{lof}{\contentsline {figure}{\numberline {5}{\ignorespaces Scalability of STIX vs TAHOE. The x-axis is the total number of email events in the database. The y-axis is the total time taken for $1000$ queries in the databases. The query for the STIX database is \texttt  {find(\{"0.value": "jdoe@example.com"\})}. The query for the TAHOE database is \texttt  {find(\{"\_ref": "50f2..."\})}.\relax }}{6}\protected@file@percent }
+\newlabel{fig:stixVtahoe}{{5}{6}}
+\newlabel{fig:event_doc}{{6a}{6}}
+\newlabel{sub@fig:event_doc}{{a}{6}}
+\newlabel{fig:event_tahoe}{{6b}{6}}
+\newlabel{sub@fig:event_tahoe}{{b}{6}}
+\newlabel{fig:event_tahoe_time}{{6c}{6}}
+\newlabel{sub@fig:event_tahoe_time}{{c}{6}}
+\@writefile{lof}{\contentsline {figure}{\numberline {6}{\ignorespaces Fig. \ref  {fig:event_tahoe} shows how TAHOE intrinsically correlates the two separate events from Fig. \ref  {fig:event_doc} based on their common attribute. Fig. \ref  {fig:event_tahoe_time} shows an example TAHOE graph for a time-varying attribute.\relax }}{6}\protected@file@percent }
+\newlabel{fig:tahoe_corr}{{6}{6}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {1.6}Features of TAHOE}{7}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {1.6.1}\textbf  {Data Normalization}}{7}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {1.6.2}\textbf  {Data De-duplication}}{7}\protected@file@percent }
+\newlabel{sss:dup}{{1.6.2}{7}}
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {1.6.3}\textbf  {Database Independence}}{7}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {1.6.4}\textbf  {Optimized for Indexing}}{7}\protected@file@percent }
+\newlabel{sss:idx}{{1.6.4}{7}}
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {1.6.5}\textbf  {Globally Unique \& Reproducible Data for Conflict-free Sharing}}{7}\protected@file@percent }
+\@writefile{lof}{\contentsline {figure}{\numberline {7}{\ignorespaces TAHOE id and edges are globally unique and reproducible, making them collision free.\relax }}{7}\protected@file@percent }
+\newlabel{fig:repedge}{{7}{7}}
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {1.6.6}\textbf  {Bidirectional Edges for Versatile Queries}}{8}\protected@file@percent }
+\newlabel{sss:biq}{{1.6.6}{8}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {1.7}Threat Data Query Language (TDQL)}{8}\protected@file@percent }
+\newlabel{ss:tdql}{{1.7}{8}}
+\@writefile{toc}{\contentsline {section}{\numberline {2}ThreatRank to Detect Malicious Events}{8}\protected@file@percent }
+\newlabel{sec:pagerank}{{2}{8}}
+\newlabel{eq:trwij}{{1}{8}}
+\newlabel{eq:trep}{{2}{8}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {2.1}Why 0.998?}{8}\protected@file@percent }
+\@writefile{loa}{\contentsline {algocf}{\numberline {1}{\ignorespaces ThreatRank\relax }}{9}\protected@file@percent }
+\newlabel{algo:threatrank}{{1}{9}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {2.2}Who Classifies Malicious Events \& Edges?}{10}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {3}Data Governance \& Privacy Preservation}{10}\protected@file@percent }
+\newlabel{sec:datagov}{{3}{10}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {3.1}Data Model and Privacy Parameters}{10}\protected@file@percent }
+\@writefile{lof}{\contentsline {figure}{\numberline {8}{\ignorespaces Data owner determines if an attribute is public or private.\relax }}{10}\protected@file@percent }
+\newlabel{fig:priv1}{{8}{10}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {3.2}Public Attribute (Not Encrypted)}{10}\protected@file@percent }
+\@writefile{lof}{\contentsline {figure}{\numberline {9}{\ignorespaces Event data in TAHOE format before encryption.\relax }}{10}\protected@file@percent }
+\newlabel{fig:priv2}{{9}{10}}
+\@writefile{lof}{\contentsline {figure}{\numberline {10}{\ignorespaces Public Data Query.\relax }}{11}\protected@file@percent }
+\newlabel{fig:pubque}{{10}{11}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {3.3}Private Attribute Encryption}{11}\protected@file@percent }
+\@writefile{lof}{\contentsline {figure}{\numberline {11}{\ignorespaces Event data in TAHOE format after encryption.\relax }}{11}\protected@file@percent }
+\newlabel{fig:priv3}{{11}{11}}
+\@writefile{lof}{\contentsline {figure}{\numberline {12}{\ignorespaces Private Data Query.\relax }}{11}\protected@file@percent }
+\newlabel{fig:privque}{{12}{11}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {3.4}Private Attribute Sharing}{11}\protected@file@percent }
+\newlabel{sss:privq}{{3.4}{11}}
+\bibstyle{ACM-Reference-Format}
+\bibdata{refs.bib}
+\bibcite{banker2011mongodb}{{1}{2011}{{Banker}}{{Banker}}}
+\bibcite{barnum2012standardizing}{{2}{2012}{{Barnum}}{{Barnum}}}
+\bibcite{bray2014javascript}{{3}{2014}{{Bray}}{{Bray}}}
+\bibcite{dulaunoy-misp-core-format-13}{{4}{2020}{{Dulaunoy and Iklody}}{{Dulaunoy and Iklody}}}
+\bibcite{sadique2021tahoe}{{5}{2021}{{Sadique}}{{Sadique}}}
+\@writefile{lof}{\contentsline {figure}{\numberline {13}{\ignorespaces Private Data Query by Trusted Party.\relax }}{12}\protected@file@percent }
+\newlabel{fig:privquetrusted}{{13}{12}}

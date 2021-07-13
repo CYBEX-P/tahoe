@@ -1,0 +1,24 @@
+\babel@toc {nil}{}
+\contentsline {section}{\numberline {1}TAHOE --- A Cyberthreat Language}{2}%
+\contentsline {subsection}{\numberline {1.1}TAHOE Data Instance}{2}%
+\contentsline {subsection}{\numberline {1.2}Data Structured as Graphs}{2}%
+\contentsline {paragraph}{\textbf {Events Viewed as Nested Documents}}{3}%
+\contentsline {subsection}{\numberline {1.3}Representing Complex Data -- TAHOE vs. MISP}{4}%
+\contentsline {subsection}{\numberline {1.4}Indexing \& Scalability -- TAHOE vs. STIX}{4}%
+\contentsline {subsection}{\numberline {1.5}Intrinsic Correlation of Graphical Data}{5}%
+\contentsline {subsection}{\numberline {1.6}Features of TAHOE}{7}%
+\contentsline {subsubsection}{\numberline {1.6.1}\textbf {Data Normalization}}{7}%
+\contentsline {subsubsection}{\numberline {1.6.2}\textbf {Data De-duplication}}{7}%
+\contentsline {subsubsection}{\numberline {1.6.3}\textbf {Database Independence}}{7}%
+\contentsline {subsubsection}{\numberline {1.6.4}\textbf {Optimized for Indexing}}{7}%
+\contentsline {subsubsection}{\numberline {1.6.5}\textbf {Globally Unique \& Reproducible Data for Conflict-free Sharing}}{7}%
+\contentsline {subsubsection}{\numberline {1.6.6}\textbf {Bidirectional Edges for Versatile Queries}}{8}%
+\contentsline {subsection}{\numberline {1.7}Threat Data Query Language (TDQL)}{8}%
+\contentsline {section}{\numberline {2}ThreatRank to Detect Malicious Events}{8}%
+\contentsline {subsection}{\numberline {2.1}Why 0.998?}{8}%
+\contentsline {subsection}{\numberline {2.2}Who Classifies Malicious Events \& Edges?}{10}%
+\contentsline {section}{\numberline {3}Data Governance \& Privacy Preservation}{10}%
+\contentsline {subsection}{\numberline {3.1}Data Model and Privacy Parameters}{10}%
+\contentsline {subsection}{\numberline {3.2}Public Attribute (Not Encrypted)}{10}%
+\contentsline {subsection}{\numberline {3.3}Private Attribute Encryption}{11}%
+\contentsline {subsection}{\numberline {3.4}Private Attribute Sharing}{11}%

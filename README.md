@@ -2,23 +2,9 @@
 
 # TAHOE — A Cyberthreat Language
 
-Any CIS platform like [CYBEX-P](https://github.com/cybex-p) potentially handles hundreds of different data formats. Thus, it needs a standard data format and structure to represent threat data. A cyberthreat language (CTL) is a specification of how to format and serialize any kind of threat data. CYBEX-P uses TAHOE instead of other CTLs like [STIX](https://oasis-open.github.io/cti-documentation/) or [MISP](https://github.com/MISP/misp-rfc). TAHOE structures threat data as JSON documents.
+Any CIS platform like [CYBEX-P](https://github.com/cybex-p) potentially handles hundreds of different data formats. Thus, it needs a standard data format and structure to represent threat data. Examples of threat data are email, firewall logs, malware signatures, file hashes etc. A cyberthreat language (CTL) is a specification of how to format and serialize any kind of threat data. CYBEX-P uses TAHOE instead of other CTLs like [STIX](https://oasis-open.github.io/cti-documentation/) or [MISP](https://github.com/MISP/misp-rfc). TAHOE structures threat data as JSON documents.
 
-
-## TAHOE Data Instance
-
-A piece of TAHOE data is called an instance and there are 5 types of TAHOE instances —
-
-1.  **Raw** A data instance stores unprocessed user data.
-
-2.  **Attribute** The most basic datatype that holds a single piece of
-    information, like an IP address.
-
-3.  **Object** Groups several attributes or other objects together, e.g., a file may have a filename attribute and a file-size attribute.
-
-4.  **Event** An event consists of one or more attributes or objects along with a timestamp. Events structure attributes or objects into complete threat data. 
-
-5.  **Session** A session groups arbitrarily related events. (e.g. events when a user visits a website).
+This repository is a Python library that should be used to structure any threat data in TAHOE format.
 
 
 ## Installation
@@ -47,7 +33,20 @@ python -m unittest
 ```
 
 
+## TAHOE Data Instance
 
+A piece of TAHOE data is called an instance and there are 5 types of TAHOE instances —
+
+1.  **Raw** A data instance stores unprocessed user data.
+
+2.  **Attribute** The most basic datatype that holds a single piece of
+    information, like an IP address.
+
+3.  **Object** Groups several attributes or other objects together, e.g., a file may have a filename attribute and a file-size attribute.
+
+4.  **Event** An event consists of one or more attributes or objects along with a timestamp. Events structure attributes or objects into complete threat data. 
+
+5.  **Session** A session groups arbitrarily related events. (e.g. events when a user visits a website).
 
 
 
