@@ -20,20 +20,18 @@ from collections import defaultdict
 import copy
 import json
 import hashlib
-import pdb
-from pprint import pprint
 
 
 if __name__ in ["__main__", "instance"]:
     from backend import Backend, NoBackend
     from misc import dtresolve, limitskip, branches, features, canonical
     from parse import parse, getclass
-    from error import DependencyError, BackendError
+    from exceptions import DependencyError, BackendError
 else:
     from .backend import Backend, NoBackend
     from .misc import dtresolve, limitskip, branches, features, canonical
     from .parse import parse, getclass
-    from .error import DependencyError, BackendError
+    from .exceptions import DependencyError, BackendError
   
 
 # === Global Variables ===
@@ -51,19 +49,20 @@ class Instance():
     itype : {"attribute", "object", "event", "session", "raw"}
         Instance type.
     sub_type : str
-        Instance sub type. e.g. "ipv4", "email-addr"`.
+        Instance sub type. e.g. "ipv4", "email_addr"`.
     _hash : str
-        SHA-256 digest of ``f"{itype}{sub_type}{data}"``.
+        SHA-256 digest of ``self._unique``.
         A globally unique but reproducible ID of the instance.
     _backend : tahoe._backend.Backend
-        Data storage. Default `NoBackend`. Use `NoBackend` for only data
-        sharing and `MongoBackend` for storing the data.
-        For performance, `_backend` should be a class variable not an
-        instance variable. Set it like ``Instance._backend = _backend``.
-.
+        Data storage. Default `NoBackend`. Use `NoBackend` for only
+        data sharing and `MongoBackend` for storing the data.
 
-    Example
-    -------
+        Each _backend variable maintains a database connection. So,
+        ideally this attribute belongs to the class not an instance.
+        This reduces number of database connections.
+
+    Examples
+    --------
     Setting default MongoBackend::
 
         >>> from tahoe import MongoBackend, Instance, Attribute
@@ -71,11 +70,13 @@ class Instance():
         >>> Instance._backend = _backend
         >>> a = Attribute("ipv4", "1.1.1.1")
         >>> print(a._backend)
-        MongoBackend("localhost:27017", "tahoe_db", "instance")
-
+        MongoBackend('mongodb://localhost:27017', 'tahoe_db', 'instance')
     """
 
     _backend = NoBackend()
+    """For performance, `_backend` should be a class variable not an
+    instance variable. To set: ``Instance.set_backend(_backend)``"""
+
 
     def __init__(self, **kwargs):
         if '_backend' in kwargs:
@@ -100,7 +101,6 @@ class Instance():
         return self.json
 
 
-
     # Public methods
 
     def branches(self):
@@ -117,6 +117,7 @@ class Instance():
             return b
 
         return branch(d)
+
 
     def delete(self, delete_children=True):
         """Deletes this instance and all children."""
@@ -136,6 +137,7 @@ class Instance():
                 I.delete()
             except DependencyError:
                 pass
+
                    
     @property    
     def doc(self):
@@ -146,6 +148,7 @@ class Instance():
                 d[k] = v
         return d
 
+
     def get_parents(self, q={}, p=_P):
 ##      I didn't make parents a property like doc or json because,
 ##      database query takes a long time. It is not a good practice
@@ -153,26 +156,29 @@ class Instance():
         
         return self._backend.find({"_ref": self._hash, **q}, p)
 
+
     @property
     def json(self):
         return json.dumps(self.doc)
 
+
     def related(self, itype='all', level=1, p=_P, start=0, end=0,
             limit=0, skip=0, page=1, category='all', context='all'):
         """
-        Pulls all the attributes and objects connected to the event. 
-        All retrieves other events that are connected to it through 
-        a common session. If the function is called for an attribute,
-        object, or session, this function retrieves all the events
-        connect to it.
+        Get instances related to self.
+
+        TAHOE stores data as network graphs. The nodes in the graph are
+        TAHOE instances like attributes, objects, events, sessions etc.
+        If two TAHOE instances are connected in a graph in the db, we
+        call them related instances. This method gets all instances
+        related to self.
 
         Parameters
         ----------
-        itype: string
-            the itype of the Tahoe instance used to call this function
-            Default: 'all'
+        itype: {"all", "attribute", "object", "event"}
+            Get the related instances of `itype` only.
         level: int
-
+            
         p: dict
             the projection of the database query
             Default: '_P' or whatever is the default id
@@ -189,7 +195,7 @@ class Instance():
         """
 
         if not isinstance(level, int):
-            raise TypeError(f"Expected type(level)='int' got '{type(level)}'!")
+            raise TypeError(f"type(level)={type(level)}, expected 'int'!")
         if level < 0:
             raise ValueError(f"Expected level>=0 got '{level}'!")
         elif level == 0:
@@ -207,13 +213,11 @@ class Instance():
         rel = [i for i in self._backend.find(q, p)]
  
         return rel, page, page+1
+
         
     def related_hash(self, level=0, visited=None, start=0, end=0,
             limit=0, skip=0, page=1, category='all', context='all'):
-        """
-        Retrieves and returns all the related hashes corresponding to
-        the object that was called in the 'related' function.
-        """
+        """Gets the _hash of all instances related to self."""
 
         if visited is None:
             visited = set()
@@ -241,8 +245,11 @@ class Instance():
 
         return list(all_rel_hash)
 
+
     @classmethod
     def set_backend(cls, _backend):
+        """Sets _backend of the class in Python."""
+        
         cls._backend = _backend
 
 
@@ -254,29 +261,28 @@ class Instance():
         instance_type = getclass(type_str)
         return isinstance(instance, instance_type)
 
+
     @property
     def _unique(self):
+        """Globally unique representation of the instance."""
+
         unique = self.itype + self.sub_type + canonical(self.data)
         return unique.encode('utf-8')
 
+
     def _update(self, update=None):
         """
-        Updates fields of a TAHOE instance in both
-        backend and Python object.
+        Updates fields of a TAHOE instance in both backend and Python
+        object.
 
-        Parameters
-        ----------
-        update: bool
-
-        Warning
-        -------
-        Does not update `_hash` or `_ref`.
-        
         Parameters
         ----------
         update : dict or None
             If None the Python object just syncs with backend.
-        
+
+        Warning
+        -------
+        Does not update `_hash` or `_ref`.        
         """
 
         q = {"_hash":self._hash}
@@ -294,9 +300,8 @@ class Instance():
     # Methods to validate common function parameters
 
     def _validate_param(self, **kwargs):
-        """
-        Asserts that the items of the arguments passed are of the correct datatype.
-        """
+        """Basic validation of some commmon function parameters."""
+        
         for k, v in kwargs.items():
             if k == '_backend':
                 if not isinstance(v, Backend):
@@ -332,19 +337,54 @@ class Instance():
 
 
 class OES(Instance):
-    """This is the base class for Object, Event, Session"""
-    
+    """This is the parent class for Object, Event, Session."""
 
     # public methods
 
     def add_instance(self, data):
+        """"
+        Add an attribute/object to self.
+
+        Parameters
+        ----------
+        data : tahoe.Attribute, tahoe.Object or list
+            The attribute or object or the list of attributes and
+            objects to add to self.
+        """"
+        
         self.edit(add_data=data)
 
+
     def remove_instance(self, data):
+        """
+        Remove an attribute/object from self.
+        
+        Parameters
+        ----------
+        data : tahoe.Attribute, tahoe.Object or list
+            The attribute or object or the list of attributes and
+            objects to remove from self.
+        """
+        
         self.edit(remove_data=data)
 
+
     def replace_instance(self, old, new):
+        """
+        Replace one or more attribute/object with others in self.
+        
+        Parameters
+        ----------
+        old : tahoe.Attribute, tahoe.Object or list
+            The attribute or object or the list of attributes and
+            objects to remove from self.
+        new : tahoe.Attribute, tahoe.Object or list
+            The attribute or object or the list of attributes and
+            objects to add to self.
+        """
+        
         self.edit(new, old)
+
 
     def edit(self, add_data=None, remove_data=None):
         """
@@ -478,6 +518,7 @@ class OES(Instance):
                 d[k] += v
         return dict(d)
 
+
     def _makeref(self, data, prev_cref=None, prev_ref=None):
         """prev_cref and prev_ref are used by add_instance()"""
 
@@ -492,8 +533,10 @@ class OES(Instance):
                 _ref += i._ref
         return list(set(_cref)), list(set(_ref))
 
+
     def _validate_data(self, data):
         return self._validate_instance(data, ['attribute', 'object'])
+
 
     def _validate_instance(self, instance, type_list):
         """
