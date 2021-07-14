@@ -342,7 +342,7 @@ class OES(Instance):
     # public methods
 
     def add_instance(self, data):
-        """"
+        """
         Add an attribute/object to self.
 
         Parameters
@@ -350,7 +350,7 @@ class OES(Instance):
         data : tahoe.Attribute, tahoe.Object or list
             The attribute or object or the list of attributes and
             objects to add to self.
-        """"
+        """
         
         self.edit(add_data=data)
 
