@@ -261,7 +261,7 @@ class IdentityBackend(tahoe.MongoBackend, _IdentityBackendBase):
     
 class MockIdentityBackend(tahoe.backend.MockMongoBackend, _IdentityBackendBase):
     """
-    MockIdentityBackend uses `mongomock` for testing.
+    MockIdentityBackend uses `mongomock` for unittests.
 
     Lookup 'pyhon mongomock library' to know more about mongomock.
     Identity DB stores user, org and input-config data. IdentityBackend

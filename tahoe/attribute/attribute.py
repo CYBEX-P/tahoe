@@ -12,8 +12,6 @@ if __name__ != 'tahoe.attribute.attribute':
     del sys, os
 import tahoe
 
-
-
 # === Global Variables ===
 
 dtresolve = tahoe.misc.dtresolve
@@ -23,15 +21,13 @@ _P = {'_id': 0}
 """Default projection for MongoDB queries"""
 
 
-
-
 class Attribute(tahoe.Instance):
     """
     An attribute holds a single piece of information, like an URL.
 
     Attributes
     ----------
-    itype : str
+    itype : "attribute"
         Constant value `attribute`. (Automatically set)
     sub_type : str
         Type of the `attribute`, e.g. `ipv4, email-addr`.
@@ -46,7 +42,7 @@ class Attribute(tahoe.Instance):
         Data storage. Use `NoBackend` for only data
         sharing and `MongoBackend` for storing the data.
         For performance, `_backend` should be a class variable not an
-        instance variable. Set it like ``Instance._backend = backend``.
+        instance variable. To set: ``Instance.set_backend(_backend)``.
 
 
     Examples
@@ -85,12 +81,12 @@ class Attribute(tahoe.Instance):
     -----
     An attribute's ``_backend`` can be set in 3 ways:
 
-    1. ``Instance._backend = backend`` (recommended)
-    2. ``Attribute._backend = backend`` (not recommended)
+    1. ``Instance.set_backend(_backend)`` (recommended)
+    2. ``Attribute.set_backend(_backend)`` (not recommended)
     3. ``a = Attribute('ipv4', '1.1.1.1', _backend=_backend)``
 
     Never use 2. Use 3 only if you want a different `_backend` than the
-    default class `_backend`.
+    default class `_backend` temporarily.
 
 
     Warning
@@ -191,11 +187,15 @@ class Attribute(tahoe.Instance):
 
         return self._backend.count_documents(q, **kwargs)
 
+
     def degree(self, itype='all'):
+        """Counts the total number objects/events related to self."""
+        
         q = {'_ref': self._hash}
         if itype != 'all':
             q['itype'] = itype
         return self._backend.count_documents(q)
+
 
     def events(self, p=_P, start=0, end=0, limit=0, skip=0, page=1,
               category='all', context='all'):
@@ -255,6 +255,53 @@ class Attribute(tahoe.Instance):
     def related(self, itype='all', level=1, p=_P, start=0, end=0,
             limit=0, skip=0, page=1, category='all', context='all',
             summary=False, summary_graph=False):
+        """
+        Get instances related to self.
+
+        TAHOE stores data as network graphs. The nodes in the graph are
+        TAHOE instances like attributes, objects, events, sessions etc.
+        If two TAHOE instances are connected in a graph in the db, we
+        call them related instances. This method gets all instances
+        related to this attribute.
+
+        Parameters
+        ----------
+        itype: {"all", "attribute", "object", "event"}
+            Get the related instances of `itype` only.
+        level: int
+            
+        p: dict
+            the projection of the database query
+            Default: '_P' or whatever is the default id
+        start: int/float
+
+        end: int/float
+
+        limit: int
+
+        skip: int
+
+        page: int
+
+        category: {"all", "benign", "malicious", "unknown"},
+        default="all"
+            If "malicious", count only malicious events. Simlarly for
+            "bening", "unknown" etc.
+        context: {"all", "benign", "malicious", "unknown"},
+        default="all"
+            If "malicious", count events where this object was seen in
+            a malicious context. Simlarly for "bening", "uknown" etc.
+        summary: bool
+            If True, return only attributes (not objects or eventss) in
+            a dict where each key is an `Attribute.sub_type` and each
+            value is a list of `Attribute.data`.
+        summary_graph: bool
+            If True, return only attributes (not objects or eventss) in
+            a dict where each is an `Attribute.sub_type` and each value
+            is a list of tuples. The tuples contain `Attribute.data` and
+            a string representation of the graph path that connects this
+            data with self.
+        """
 
         if summary_graph:
             itype = 'all'

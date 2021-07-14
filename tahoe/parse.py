@@ -70,6 +70,7 @@ def _create_itype_class_map():
     
     ITYPE_CLASS_MAP['user'] = {'default': User}
 
+
 def getclass(itype, sub_type='default'):
     """
     Utility function that returns a variable 'class_' containing the itype and sub_type values from 'ITYPE_CLASS_MAP'.
