@@ -3,15 +3,13 @@
 import hashlib
 import time
 
-if __name__ != 'tahoe.identity.identity':
+if __name__ != 'tahoe.tdql.tdql':
     import sys, os
-    sys.path = ['..', os.path.join('..', '..')] + sys.path
+    sys.path = list(set( ['..', os.path.join('..', '..')] + sys.path))
     del sys, os
 from tahoe import Attribute, Object
 from tahoe.misc import canonical
 
-    
-# class ThreatQL()
 
 class TDQL(Object):
     """
