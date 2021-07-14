@@ -1,48 +1,51 @@
 """`unittests for tahoe.event"""
-import builtins
+
+import builtins as B
+import pdb
+import unittest
 
 if __name__ != 'tahoe.tests.test_event':
     import sys
     sys.path = ['..', '../..'] + sys.path
     del sys
 
-import pdb
-import unittest
-
-from tahoe import Instance, Attribute, Object, Event
-from tahoe.backend import MongoBackend, MockMongoBackend
-from tahoe.tests.test_backend import MongoBackendTest
-
+from tahoe import Instance, Attribute, Object, Event, Session
+from tahoe.tests.backend.test_backend import setUpBackend, tearDownBackend
+    
 
 def setUpModule():
-    _backend = MongoBackendTest.setUpClass()
+    _backend = setUpBackend()
+
     Instance.set_backend(_backend)
     Attribute.set_backend(_backend)
     Object.set_backend(_backend)
     Event.set_backend(_backend)
-    
-    assert Attribute._backend is Instance._backend
-    assert Object._backend is Instance._backend
-    assert Event._backend is Instance._backend
-    
-   
+    Session.set_backend(_backend)
+
+    assert Instance._backend is Attribute._backend
+    assert Instance._backend is Object._backend
+    assert Instance._backend is Event._backend
+    assert Instance._backend is Session._backend
+
 
 def tearDownModule():
-    MongoBackendTest.tearDownClass()
+    tearDownBackend(Instance._backend)
+
 
 
 def make_test_data():
-    
-    builtins.afn = Attribute('filename', 'virus.exe')
-    builtins.afs = Attribute('filesize', 20012)
-    builtins.of = Object('file', [afn, afs])
-    builtins.au = Attribute('url', 'example.com')
+    B.afn = Attribute('filename', 'virus.exe')
+    B.afs = Attribute('filesize', 20012)
+    B.of = Object('file', [afn, afs])
 
-    builtins.orgid = 'a441b15fe9a3cf56661190a0b93b9dec7d041272' \
+    B.au = Attribute('url', 'example.com')
+    B.orgid = 'a441b15fe9a3cf56661190a0b93b9dec7d041272' \
                 '88cc87250967cf3b52894d11'''
-    builtins.timestamp = 100
+    B.timestamp = 100
+    B.e = Event('file_download', [au, of], orgid, timestamp)
 
-    builtins.e = Event('file_download', [au, of], orgid, timestamp)
+def delete_test_data():
+    del B.afn, B.afs, B.of, B.au, B.orgid, B.timestamp, B.e
 
 
 class SetBackendTest(unittest.TestCase):
@@ -103,8 +106,7 @@ class InitTest(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        assert isinstance(Event._backend, (MongoBackend, MockMongoBackend))
-        Event._backend.drop()
+        Instance._backend.drop()
 
     def test_init(self):
         data = Attribute("test", "test")
@@ -154,11 +156,12 @@ class InitTest(unittest.TestCase):
         self.assertEqual(e_d['timestamp'], -1)
 
 
+
 class CategoryTest(unittest.TestCase):
+
     @classmethod
     def setUpClass(cls):
-        assert isinstance(Event._backend, (MongoBackend, MockMongoBackend))
-        Event._backend.drop()
+        Instance._backend.drop()
 
     def __init__(self, *args, **kwargs):
         self.a1 = Attribute("test", "test")
@@ -167,13 +170,13 @@ class CategoryTest(unittest.TestCase):
         self.timestamp = 100
         super().__init__(*args, **kwargs)
 
-    def test1_unknown(self):
+    def test_01_unknown(self):
         e = Event('test', self.a1, self.orgid, self.timestamp)
         e_d = e._backend.find_one({'_hash': e._hash})
         self.assertEqual(e.category, 'unknown')
         self.assertEqual(e_d['category'], 'unknown')
 
-    def test2_benign(self):
+    def test_02_benign(self):
         e = Event('test', self.a1, self.orgid, self.timestamp, category='benign')
         e_d = e._backend.find_one({'_hash': e._hash})
         self.assertEqual(e.category, 'unknown')
@@ -191,7 +194,7 @@ class CategoryTest(unittest.TestCase):
         self.assertEqual(e_d['category'], 'benign')
 
 
-    def test3_malicious(self):
+    def test_03_malicious(self):
         Event._backend.drop()
         e = Event('test', self.a1, self.orgid, self.timestamp)
         e_d = e._backend.find_one({'_hash': e._hash})
@@ -204,12 +207,18 @@ class CategoryTest(unittest.TestCase):
         self.assertEqual(e_d['category'], 'malicious')
 
 
+
 class ContextTest(unittest.TestCase):
+    
     @classmethod
     def setUpClass(cls):
-        assert isinstance(Event._backend, (MongoBackend, MockMongoBackend))
-        Event._backend.drop()
+        Instance._backend.drop()
         make_test_data()
+
+    @classmethod
+    def tearDownClass(cls):
+        delete_test_data()
+        Instance._backend.drop()
 
     def test_01_benign(self):
         e_d = e._backend.find_one({'_hash': e._hash})
@@ -380,11 +389,15 @@ class ContextTest(unittest.TestCase):
 
 
 class CategoryTest(unittest.TestCase):
+    
     @classmethod
     def setUpClass(cls):
-        assert isinstance(Event._backend, (MongoBackend, MockMongoBackend))
-        Event._backend.drop()
+        Instance._backend.drop()
         make_test_data()
+
+    @classmethod
+    def tearDownClass(cls):
+        delete_test_data()
 
     def test_category_benign(self):
         e.set_category('benign')
@@ -481,7 +494,7 @@ def make_threatrank_data():
     event_email_1 = Event('email', data, oid, timestamp1, mal_data=mal_data)
     event_email_1.set_category('malicious')
 
-    builtins.event_email_1 = event_email_1
+    B.event_email_1 = event_email_1
 
 
 
@@ -534,7 +547,7 @@ def make_threatrank_data():
     #mal_data = [att_from_ip, att_from_email, att_subject, att_reply_to, att_message_id, att_body]
     event_email_2 = Event('email', data, oid, timestamp2)
 
-    builtins.event_email_2 = event_email_2
+    B.event_email_2 = event_email_2
 
 
 
@@ -587,18 +600,17 @@ def make_threatrank_data():
     #mal_data = [att_from_ip, att_from_email, att_subject, att_reply_to, att_message_id, att_body]
     event_email_3 = Event('email', data, oid, timestamp3)
 
-    builtins.event_email_3 = event_email_3
+    B.event_email_3 = event_email_3
 
         
 class ThreatRankTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        assert isinstance(Event._backend, (MongoBackend, MockMongoBackend))
-        Event._backend.drop()
+        Instance._backend.drop()
         make_threatrank_data()
 
     def test_01(self):
-        return # debug
+        return
         tr = event_email_1.threatrank()
         print(tr)
         tr = event_email_2.threatrank()

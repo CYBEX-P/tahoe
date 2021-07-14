@@ -17,6 +17,25 @@ from tahoe.identity.backend import IdentityBackend, MockIdentityBackend
 from tahoe.tests.identity.test_backend import setUpBackend, tearDownBackend
 
 
+def setUpModule():
+    _backend = setUpBackend()
+
+    Instance.set_backend(_backend)
+    Attribute.set_backend(_backend)
+    Object.set_backend(_backend)
+    InputConfig.set_backend(_backend)
+    WebSocketConfig.set_backend(_backend)
+
+    assert Instance._backend is Attribute._backend
+    assert Instance._backend is Object._backend
+    assert Instance._backend is InputConfig._backend
+    assert Instance._backend is WebSocketConfig._backend
+
+
+def tearDownModule():
+    tearDownBackend(Instance._backend)
+
+
 def make_test_data():
     builtins.plugin = 'websocket'
     builtins.name = 'Jay\'s Honeypot London'
@@ -46,19 +65,7 @@ def delete_test_data():
         builtins.timezone, builtins.url, builtins.ap, builtins.an, \
         builtins.att, builtins.ao, builtins.at, builtins.au, builtins.ae, \
         builtins.ic, builtins.icd, builtins.wsc, builtins.wscd
-
-
-def setUpModule():
-    _backend = setUpBackend()
-    Instance.set_backend(_backend)
-
-    assert InputConfig._backend is Instance._backend
-    assert WebSocketConfig._backend is Instance._backend
-    assert isinstance(Instance._backend, (IdentityBackend, MockIdentityBackend))
     
-
-def tearDownModule():
-    tearDownBackend(Instance._backend)
 
 
 class InputConfigInitTest(unittest.TestCase):

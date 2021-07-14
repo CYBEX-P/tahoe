@@ -19,6 +19,28 @@ from tahoe.identity.backend import IdentityBackend, MockIdentityBackend
 from tahoe.tests.identity.test_backend import setUpBackend, tearDownBackend
 from tahoe.identity.error import UserExistsError
 
+
+def setUpModule():
+    _backend = setUpBackend()
+
+    Instance.set_backend(_backend)
+    Attribute.set_backend(_backend)
+    Object.set_backend(_backend)
+    User.set_backend(_backend)
+    SuperUser.set_backend(_backend)
+    Org.set_backend(_backend)
+
+    assert Instance._backend is Attribute._backend
+    assert Instance._backend is Object._backend
+    assert Instance._backend is User._backend
+    assert Instance._backend is SuperUser._backend
+    assert Instance._backend is Org._backend
+
+
+def tearDownModule():
+    tearDownBackend(Instance._backend)
+
+
 def make_test_data():
     builtins.u = User('johndoe@example.com', 'Abcd1234', 'John Doe')
     builtins.ud = u._backend.find_one({'_hash': u._hash}, {'_id': 0})
@@ -52,18 +74,6 @@ def delete_test_data():
     builtins.su1d, builtins.sae, builtins.sap, builtins.san
     
 
-
-def setUpModule():
-    _backend = setUpBackend()
-    Instance.set_backend(_backend)
-
-    assert User._backend is Instance._backend
-    assert SuperUser._backend is Instance._backend
-    assert isinstance(User._backend, (IdentityBackend, MockIdentityBackend))
-    
-
-def tearDownModule():
-    tearDownBackend(Instance._backend)
 
 
 class InitTest(unittest.TestCase):

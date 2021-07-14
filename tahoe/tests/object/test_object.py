@@ -1,27 +1,31 @@
-"""unittests for tahoe.object.object.py"""
-
-if __name__ != 'tahoe.tests.object.test_object':
-    import sys
-    sys.path = ['..', '../..', '../../..'] + sys.path
-    del sys
+"""unittests for tahoe.object"""
 
 import pdb
 import unittest
 
+if __name__ != 'tahoe.tests.object.test_object':
+    import sys, os
+    J = os.path.join
+    sys.path = ['..', J('..','..'), J('..','..','..')] + sys.path
+    del J, sys, os
+
 from tahoe import Instance, Attribute, Object
 from tahoe.backend import MongoBackend, MockMongoBackend
-from tahoe.tests.test_backend import MongoBackendTest
+from tahoe.tests.backend.test_backend import setUpBackend, tearDownBackend
 
 def setUpModule():
-    _backend = MongoBackendTest.setUpClass()
-    Instance.set_backend(_backend)
+    _backend = setUpBackend()
 
-    assert Attribute._backend is Instance._backend
-    assert Object._backend is Instance._backend
-    
+    Instance.set_backend(_backend)
+    Attribute.set_backend(_backend)
+    Object.set_backend(_backend)
+
+    assert Instance._backend is Attribute._backend
+    assert Instance._backend is Object._backend
+
 
 def tearDownModule():
-    MongoBackendTest.tearDownClass()
+    tearDownBackend(Instance._backend)
 
 
 class SetBackendTest(unittest.TestCase):
@@ -385,73 +389,6 @@ class AddRemoveInstanceTest(unittest.TestCase):
 
         self.assertIn('password', o3.data['test'][0]['test'][0])
         self.assertIn('123456', o3.data['test'][0]['test'][0]['password'])
-
-
-##
-##class CountTest(unittest.TestCase):
-##    """
-##    Example
-##    -------
-##    a1 = Atribute('ip', '1.1.1.1')
-##    e1 = Event
-##    """
-##    
-##    @classmethod
-##    def setUpClass(cls):
-##        assert isinstance(Attribute._backend, MongoBackend)
-##        Attribute._backend.drop()  
-##        
-##
-##class DeleteTest(unittest.TestCase):
-##    """
-##    Examples
-##    --------
-##    Example of deleting an attribute::
-##    
-##        >>> import json
-##        >>> from tahoe import MongoBackend, Attribute
-##        >>> _backend = MongoBackend()
-##        >>> _backend
-##        MongoBackend('localhost:27017', 'tahoe_db', 'instance')
-##        >>> a = Attribute('ipv4', '1.1.1.1', _backend=_backend)
-##        >>> a.uuid
-##        'attribute--373ca2ac-deff-4e78-ac8c-fbf0a327d433'
-##        >>> print(json.dumps(r, indent=4))
-##        {
-##            "itype": "attribute",
-##            "data": "1.1.1.1",
-##            "uuid": "attribute--373ca2ac-deff-4e78-ac8c-fbf0a327d433",
-##            "sub_type": "ipv4",
-##            "_hash": "4469d1e06fdd2b03ce89abf4dcc354df0be231b97e7293fe17
-##            50232d2d3b23a6"
-##        }
-##        >>> a._delete()
-##        >>> r = _backend.find_one({'uuid': a.uuid}, {'_id': 0})
-##        >>> r is None
-##        True
-##        >>> 
-##    """
-##    
-##    @classmethod
-##    def setUpClass(cls):
-##        assert isinstance(Attribute._backend, MongoBackend)
-##        Attribute._backend.drop()
-##
-##    def test_delete(self):
-##        a = Attribute('ipv4', '1.1.1.1')
-##        _backend = a._backend
-##
-##        r = _backend.find_one({'uuid': a.uuid})
-##        self.assertEqual(r['uuid'], a.uuid)
-##
-##        a._delete()
-##        r = _backend.find_one({'uuid': a.uuid})
-##        self.assertIsNone(r)
-##        
-
-
-
-        
 
 
 if __name__ == '__main__':

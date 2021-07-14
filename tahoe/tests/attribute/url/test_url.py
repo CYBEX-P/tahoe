@@ -12,18 +12,21 @@ import unittest
 
 from tahoe import Instance, Attribute, Object
 from tahoe.backend import MongoBackend, MockMongoBackend
-from tahoe.tests.test_backend import MongoBackendTest
+from tahoe.tests.backend.test_backend import setUpBackend, tearDownBackend
 
 def setUpModule():
-    _backend = MongoBackendTest.setUpClass()
-    Instance.set_backend(_backend)
+    _backend = setUpBackend()
 
-    assert Attribute._backend is Instance._backend
-    assert Object._backend is Instance._backend
-    
+    Instance.set_backend(_backend)
+    Attribute.set_backend(_backend)
+    Object.set_backend(_backend)
+
+    assert Instance._backend is Attribute._backend
+    assert Instance._backend is Object._backend
+
 
 def tearDownModule():
-    MongoBackendTest.tearDownClass()
+    tearDownBackend(Instance._backend)
 
 
 class SetBackendTest(unittest.TestCase):

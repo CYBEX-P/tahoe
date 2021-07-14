@@ -1,4 +1,9 @@
-"""unittest's for tahoe.attribute.attribute.py"""
+"""unittests for tahoe.attribute.attribute.py"""
+
+import builtins as B
+import pdb
+from pprint import pprint
+import unittest
 
 if __name__ != 'tahoe.tests.attribute.test_attribute':
     import sys, os
@@ -6,25 +11,28 @@ if __name__ != 'tahoe.tests.attribute.test_attribute':
     sys.path = ['..', J('..','..'), J('..','..','..')] + sys.path
     del J, sys, os
 
-import builtins
-import pdb
-from pprint import pprint
-import unittest
-
 from tahoe import Instance, Attribute, Event, Object, Session
 from tahoe.backend import MongoBackend, MockMongoBackend
-from tahoe.tests.test_backend import MongoBackendTest
+from tahoe.tests.backend.test_backend import setUpBackend, tearDownBackend
     
 
 def setUpModule():
-    _backend = MongoBackendTest.setUpClass()
-    Instance.set_backend(_backend)
+    _backend = setUpBackend()
 
-    builtins.orgid = 'a441b15fe9a3cf56661190a0b93b9dec7d041272' \
-                '88cc87250967cf3b52894d11'
+    Instance.set_backend(_backend)
+    Attribute.set_backend(_backend)
+    Object.set_backend(_backend)
+    Event.set_backend(_backend)
+    Session.set_backend(_backend)
+
+    assert Instance._backend is Attribute._backend
+    assert Instance._backend is Object._backend
+    assert Instance._backend is Event._backend
+    assert Instance._backend is Session._backend
+
 
 def tearDownModule():
-    MongoBackendTest.tearDownClass()
+    tearDownBackend(Instance._backend)
 
 
 class SetBackendTest(unittest.TestCase):
@@ -112,14 +120,26 @@ class CountTest(unittest.TestCase):
     """
     Example
     -------
-    a1 = Atribute('ip', '1.1.1.1')
+    Count ::
+        >>> a = Attribute('ip', '1.1.1.1')
+        >>> a.count()
+        0
+        >>> e = Event('test', a, 'test_orgid', 100)
+        >>> a.count()
+        1
+        >>>      
     """
     
     @classmethod
     def setUpClass(cls):
-        assert isinstance(Attribute._backend, (MongoBackend, MockMongoBackend))
-        Attribute._backend.drop()
-        assert Attribute._backend is Event._backend
+        assert isinstance(Instance._backend, (MongoBackend, MockMongoBackend))
+        Instance._backend.drop()
+        B.orgid = 'test_orgid'
+
+    @classmethod
+    def tearDownClass(cls):
+        del B.orgid
+        Instance._backend.drop()
 
     def test01_count_one(self):
         afn = Attribute('filename', 'virus.exe')
@@ -277,24 +297,24 @@ class DeleteTest(unittest.TestCase):
         
 
 def make_related_data():
-    import builtins as b
+    B.orgid = 'test_orgid'
     
-    b.a11 = Attribute('ipv4', '1.1')
-    b.a12 = Attribute('ipv4', '1.2')
-    b.a21 = Attribute('ipv4', '2.1')
+    B.a11 = Attribute('ipv4', '1.1')
+    B.a12 = Attribute('ipv4', '1.2')
+    B.a21 = Attribute('ipv4', '2.1')
     
-    b.e1 = Event('lvl_1', [a11,a12], orgid, 100)
-    b.e2 = Event('lvl_2', [a21], orgid, 200)
+    B.e1 = Event('lvl_1', [a11,a12], orgid, 100)
+    B.e2 = Event('lvl_2', [a21], orgid, 200)
 
-    b.s1 = Session('lvl_2')
+    B.s1 = Session('lvl_2')
     s1.add_event([e1,e2])
+    
 
 def make_related_data_2():
     make_related_data()
-    import builtins as b
     
-    b.a31 = Attribute('ipv4', '3.1')
-    b.e3 = Event('lvl_1', [a11, a31], orgid, 300)
+    B.a31 = Attribute('ipv4', '3.1')
+    B.e3 = Event('lvl_1', [a11, a31], orgid, 300)
 
     e1.set_category('malicious')
     e3.set_category('benign')
@@ -302,22 +322,22 @@ def make_related_data_2():
     e1.set_context(a11, 'benign')
     e3.set_context(a11, 'malicious')
 
+
 def make_related_data_3():
-    import builtins as b
-    b.aip51 = Attribute('ipv4', '5.1')
-    b.aip52 = Attribute('ipv4', '5.2')
-    b.afn = Attribute('file_name', 'v.exe')
-    b.afh = Attribute('sha256', 'AB12')
-    b.aes = Attribute('email_addr', 'src@e.com')
-    b.aed = Attribute('email_addr', 'dst@e.com')
+    B.aip51 = Attribute('ipv4', '5.1')
+    B.aip52 = Attribute('ipv4', '5.2')
+    B.afn = Attribute('file_name', 'v.exe')
+    B.afh = Attribute('sha256', 'AB12')
+    B.aes = Attribute('email_addr', 'src@e.com')
+    B.aed = Attribute('email_addr', 'dst@e.com')
 
-    b.of = Object('file', [afn, afh])
-    b.os = Object('src', [aip51])
-    b.ose = Object('src', [aes, aip51])
-    b.ode = Object('dst', [aed])
+    B.of = Object('file', [afn, afh])
+    B.os = Object('src', [aip51])
+    B.ose = Object('src', [aes, aip51])
+    B.ode = Object('dst', [aed])
 
-    b.efd = Event('file_download', [of, os, aip52], orgid, 500)
-    b.ee = Event('email', [ose, ode], orgid, 600)
+    B.efd = Event('file_download', [of, os, aip52], orgid, 500)
+    B.ee = Event('email', [ose, ode], orgid, 600)
     
 
 class RelatedTest(unittest.TestCase):

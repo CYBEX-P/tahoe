@@ -1,29 +1,32 @@
-"""unittests for tahoe.object"""
-
-if __name__ != 'tahoe.tests.test_object':
-    import sys
-    sys.path = ['..', '../..'] + sys.path
-    del sys
+"""unittests for tahoe.object.urlobject.urlobject.py"""
 
 import pdb
 import unittest
 
+if __name__ != 'tahoe.tests.object.urlobject.test_urlobject':
+    import sys, os
+    J = os.path.join
+    sys.path = ['..', J('..','..'), J('..','..','..'),
+                J('..','..','..', '..')] + sys.path
+    del J, sys, os
+
 from tahoe import Instance, Attribute, Object
-from tahoe.backend import MongoBackend, MockMongoBackend
-from tahoe.tests.test_backend import MongoBackendTest
+from tahoe.tests.backend.test_backend import setUpBackend, tearDownBackend
+    
 
 def setUpModule():
-    _backend = MongoBackendTest.setUpClass()
+    _backend = setUpBackend()
+
     Instance.set_backend(_backend)
     Attribute.set_backend(_backend)
     Object.set_backend(_backend)
 
-    assert Attribute._backend is Instance._backend
-    assert Object._backend is Instance._backend
-    
+    assert Instance._backend is Attribute._backend
+    assert Instance._backend is Object._backend
+
 
 def tearDownModule():
-    MongoBackendTest.tearDownClass()
+    tearDownBackend(Instance._backend)
 
 
 class SetBackendTest(unittest.TestCase):

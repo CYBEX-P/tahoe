@@ -14,6 +14,7 @@ class ImpossibleError(Exception):
     pass
 
 
+
 class _DAMBase(): 
     """
     Parent of both DAM and MockDAM so that same methods are not
@@ -80,6 +81,7 @@ class _DAMBase():
         return super().find_one(*args,**kwargs)
 
 
+
 class DamBackend(_DAMBase, MongoBackend):
     def __init__(self, user, _backend, create=False, **kwargs):
         """
@@ -87,6 +89,8 @@ class DamBackend(_DAMBase, MongoBackend):
         ----------
         user : tahoe.identity.user.User
             The calling user.
+        _backend : tahoe.backend.Backend
+            The original tahoe backend.
 
         See Also
         --------
@@ -109,6 +113,7 @@ class DamBackend(_DAMBase, MongoBackend):
        return f"DamBackend('{mongo_url}', '{dbname}', '{collname}')"
 
 
+
 class MockDamBackend(_DAMBase, MockMongoBackend):
     
     def __init__(self, user, _backend, create=False, **kwargs):
@@ -117,7 +122,9 @@ class MockDamBackend(_DAMBase, MockMongoBackend):
         ----------
         user : tahoe.identity.user.User
             The calling user.
-
+        _backend : tahoe.backend.Backend
+            The original tahoe backend.
+            
         See Also
         --------
         User : tahoe.identity.User
@@ -140,7 +147,22 @@ class MockDamBackend(_DAMBase, MockMongoBackend):
 
 
 
+def get_dam(user, _backend):
+    """
+    Creates a _dam for user and _backend.
 
+    `_dam = DamBackend(user, _backend)` does not work if _backend is of
+    type `MockMongoBackend` because `MockMongoBackend` stors data in
+    a dict. This function copies that dict to the _dam object.
+    """
+
+    if isinstance(_backend, MockMongoBackend):
+        _dam = MockDamBackend(user, _backend)
+        _dam._store._documents = _backend._store._documents
+    else:
+        _dam = DamBackend(user, _backend)
+
+    return _dam
 
 
 

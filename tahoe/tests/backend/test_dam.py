@@ -1,4 +1,4 @@
-"""unittests for tahoe.dam"""
+"""unittests for tahoe.backend.dam"""
 
 import builtins as B
 import hashlib
@@ -6,21 +6,20 @@ import pdb
 import unittest
 import time 
 
-if __name__ != 'tahoe.tests.test_dam':
+if __name__ != 'tahoe.tests.backend.test_dam':
     import sys, os
-    sys.path = ['..', os.path.join('..', '..'),
-                os.path.join('..', '..', '..')] + sys.path
+    J = os.path.join
+    sys.path = ['..', J('..','..'), J('..','..')] + sys.path
     del sys, os
 import tahoe
 from tahoe import Instance, Attribute, Object, Event, Session
 from tahoe.identity import Identity, Org, User
-from tahoe.backend.dam import DamBackend, MockDamBackend
-from tahoe.tests.test_backend import setUpBackend, tearDownBackend
+from tahoe.backend.dam import get_dam
+from tahoe.tests.backend.test_backend import setUpBackend, tearDownBackend
 from tahoe.tests.identity.test_backend import setUpBackend as setUpIdBackend, \
      tearDownBackend as tearDownIdBackend
 
-def setUpModule():
-    
+def setUpModule():    
     _backend = setUpBackend()
     _id_backend = setUpIdBackend()
 
@@ -29,9 +28,10 @@ def setUpModule():
     Object.set_backend(_backend)
     Event.set_backend(_backend)
     Session.set_backend(_backend)
-    Identity._backend = _id_backend
-    User._backend = _id_backend
-    Org._backend = _id_backend
+    
+    Identity.set_backend(_id_backend)
+    User.set_backend(_id_backend)
+    Org.set_backend(_id_backend)
 
     assert Instance._backend is Attribute._backend
     assert Instance._backend is Object._backend
@@ -77,6 +77,21 @@ def delete_test_data():
 
 
 
+class InitTest(unittest.TestCase):
+
+    def test_01_get_dam(self):
+        _backend = Instance._backend
+        _backend.insert_one({"1": 1})
+
+        u1 = User('user1@example.com', 'pass1', 'User 1')
+        _dam = get_dam(u1, _backend)
+        
+        self.assertEqual(_dam.count_documents({}), 1)
+        r = _dam.find_one({})
+        self.assertEqual(r["1"], 1)
+
+        
+
 class CountTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
@@ -90,21 +105,23 @@ class CountTest(unittest.TestCase):
         Instance._backend.drop()
     
     def test_01_u1_a1(self):
-        _dam = DamBackend(u1, Attribute._backend)
+        _dam = get_dam(u1, Attribute._backend)
         a1._backend = _dam
         self.EQ(a1.count(), 1)
 
     def test_02_u2_a1(self):
-        a1._backend = DamBackend(u2, Attribute._backend)
+        a1._backend = get_dam(u2, Attribute._backend)
         self.EQ(a1.count(), 1)
 
     def test_03_u3_a1(self):
-        a1._backend = DamBackend(u3, Attribute._backend)
+        a1._backend = get_dam(u3, Attribute._backend)
         self.EQ(a1.count(), 2)
 
     def test_03_u4_a1(self):
-        a1._backend = DamBackend(u4, Attribute._backend)
+        a1._backend = get_dam(u4, Attribute._backend)
         self.EQ(a1.count(), 0)
+
+
 
 class RelatedTest(unittest.TestCase):
     @classmethod
@@ -119,18 +136,20 @@ class RelatedTest(unittest.TestCase):
         Instance._backend.drop()
       
     def test_01_u1_a1(self):
-        _dam = DamBackend(u1, Attribute._backend)
+        _dam = get_dam(u1, Attribute._backend)
         a1._backend = _dam
         a1.related()
         self.EQ(len(a1.related()[0]), 3)
         
     def test_02_u2_a1(self):
-        a1._backend = DamBackend(u2, Attribute._backend)
+        a1._backend = get_dam(u2, Attribute._backend)
         self.EQ(len(a1.related()[0]), 3)
 
     def test_03_u3_a1(self):
-        a1._backend = DamBackend(u3, Attribute._backend)
+        a1._backend = get_dam(u3, Attribute._backend)
         self.EQ(len(a1.related()[0]), 5)
+
+
     
 if __name__ == '__main__':
     unittest.main()

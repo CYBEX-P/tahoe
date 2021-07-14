@@ -1,38 +1,39 @@
-"""unittests for tahoe.object"""
+"""unittests for tahoe.tdql.tdql"""
+
+import builtins as B
+import hashlib
+import pdb
+import unittest
 
 if __name__ != 'tahoe.tests.test_tdql':
     import sys
     sys.path = ['..', '../..'] + sys.path
     del sys
 
-import builtins
-import hashlib
-import pdb
-import unittest
-
-
 from tahoe import Instance, Attribute, Object, TDQL
-from tahoe.backend import MongoBackend, MockMongoBackend
-from tahoe.tests.test_backend import MongoBackendTest
 from tahoe.misc import canonical, decanonical
+from tahoe.tests.backend.test_backend import setUpBackend, tearDownBackend
+    
 
 def setUpModule():
-    _backend = MongoBackendTest.setUpClass()
+    _backend = setUpBackend()
+
     Instance.set_backend(_backend)
     Attribute.set_backend(_backend)
     Object.set_backend(_backend)
+    TDQL.set_backend(_backend)
 
-    assert Attribute._backend is Instance._backend
-    assert Object._backend is Instance._backend
-    assert TDQL._backend is Instance._backend
-    
+    assert Instance._backend is Attribute._backend
+    assert Instance._backend is Object._backend
+    assert Instance._backend is TDQL._backend
+
 
 def tearDownModule():
-    MongoBackendTest.tearDownClass()
+    tearDownBackend(Instance._backend)
 
 
 def make_test_data():
-    builtins.data = {
+    B.data = {
         "type": "count", 
         "data" : {
             "sub_type": "email_addr", 
@@ -42,24 +43,21 @@ def make_test_data():
         "last": "1Y"
         }
     }
-    builtins.canon_data = canonical(data)
+    B.canon_data = canonical(data)
     
-    builtins.userid = 'a441b15fe9a3cf56661190a0b93b9dec7d041272' \
+    B.userid = 'a441b15fe9a3cf56661190a0b93b9dec7d041272' \
             '88cc87250967cf3b52894d11'''
-    builtins.timestamp = -1
-    builtins.encrypted = False
-    builtins.qtype = "count"
-    builtins.qdata = canon_data
-    builtins.qhash = hashlib.sha256(canon_data.encode()).hexdigest()
-    builtins.q = TDQL(qtype, qdata, qhash, userid, encrypted)
-    builtins.q_d = q._backend.find_one({'_hash': q._hash})
+    B.timestamp = -1
+    B.encrypted = False
+    B.qtype = "count"
+    B.qdata = canon_data
+    B.qhash = hashlib.sha256(canon_data.encode()).hexdigest()
+    B.q = TDQL(qtype, qdata, qhash, userid, encrypted)
+    B.q_d = q._backend.find_one({'_hash': q._hash})
 
-class AllTest(unittest.TestCase):
 
-    @classmethod
-    def setUpClass(cls):
-        assert isinstance(TDQL._backend, (MongoBackend, MockMongoBackend))
-        
+
+class AllTest(unittest.TestCase):        
 
     def test_01_init(self):
         TDQL._backend.drop()
@@ -111,12 +109,13 @@ class AllTest(unittest.TestCase):
         EQ(q_d['data']['status'][0], 'invalid')
 
         q.status = 'ready'
-        builtins.q_d = q._backend.find_one({'_hash': q._hash})
+        B.q_d = q._backend.find_one({'_hash': q._hash})
 
         EQ(q.data['status'][0], 'ready')
         EQ(q_d['data']['status'][0], 'ready')
 
         self.assertRaises(ValueError, setattr, q, "status", 'anything')
+
 
     def test_03_setsocket(self):
         TDQL._backend.drop()
@@ -133,7 +132,7 @@ class AllTest(unittest.TestCase):
 
         q.setsocket('localhost', 100, 'abcdefgh')
         
-        builtins.q_d = q._backend.find_one({'_hash': q._hash})
+        B.q_d = q._backend.find_one({'_hash': q._hash})
 
         EQ(q.data['socket'][0]['host'][0], 'localhost')
         EQ(q_d['data']['socket'][0]['host'][0], 'localhost')
@@ -141,6 +140,7 @@ class AllTest(unittest.TestCase):
         EQ(q_d['data']['socket'][0]['port'][0], 100)
         EQ(q.data['socket'][0]['nonce'][0], 'abcdefgh')
         EQ(q_d['data']['socket'][0]['nonce'][0], 'abcdefgh')
+
 
     def test_04_unique(self):
         """Ensure _hash is different for related and count."""

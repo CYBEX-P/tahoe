@@ -1,16 +1,18 @@
-"""unittests for tahoe.backend"""
+"""unittests for tahoe.backend.backend"""
 
 import builtins
 import pdb
 from pprint import pprint
 import unittest
 
-if __name__ != 'tahoe.tests.test_backend':
+from pymongo import MongoClient
+from pymongo.errors import ConnectionFailure, ServerSelectionTimeoutError
+
+if __name__ != 'tahoe.tests.backend.test_backend':
     import sys, os
     J = os.path.join
-    sys.path = ['..', J('..','..')] + sys.path
+    sys.path = ['..', J('..','..'), J('..','..')] + sys.path
     del sys, os
-
 from tahoe import Attribute
 from tahoe.backend import *
 
@@ -20,10 +22,11 @@ def setUpBackend():
     from pymongo.errors import ConnectionFailure
     dbname = "1ef0534d-6ef7-4624-84c2-7bf59f1b3927"
     try:
+        raise ConnectionFailure
         client = MongoClient()
         client.admin.command('ismaster')
         _backend = MongoBackend(dbname=dbname)
-    except ConnectionFailure:
+    except (ConnectionFailure, ServerSelectionTimeoutError):
         _backend = MockMongoBackend(dbname=dbname)
     _backend.drop()
     return _backend
@@ -42,9 +45,7 @@ class MongoBackendTest(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls, dbname=''):
-        from pymongo import MongoClient
-        from pymongo.errors import ConnectionFailure
-
+        
         assert dbname in ('', 'tahoe_db', 'report_db')
         dbname = dbname + "1ef0534d-6ef7-4624-84c2-7bf59f1b3927"
 
@@ -54,8 +55,7 @@ class MongoBackendTest(unittest.TestCase):
             client.admin.command('ismaster')
             
             cls._backend = MongoBackend(dbname=dbname)
-
-        except ConnectionFailure:
+        except (ConnectionFailure, ServerSelectionTimeoutError):
             cls._backend = MockMongoBackend(dbname=dbname)
 
         cls._backend.drop()

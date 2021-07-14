@@ -18,6 +18,28 @@ from tahoe.identity.error import InvalidUserHashError
 from tahoe.tests.identity.test_backend import setUpBackend, tearDownBackend
 
 
+def setUpModule():    
+    _backend = setUpBackend()
+
+    Instance.set_backend(_backend)
+    Attribute.set_backend(_backend)
+    Object.set_backend(_backend)
+    
+    Identity.set_backend(_backend)
+    User.set_backend(_backend)
+    Org.set_backend(_backend)
+
+    assert Instance._backend is Attribute._backend
+    assert Instance._backend is Object._backend
+    assert Instance._backend is User._backend
+    assert Instance._backend is Org._backend
+    
+
+def tearDownModule():
+    tearDownBackend(Instance._backend)
+
+
+
 def make_test_data():
     builtins.u1 = User('user1@example.com', 'Abcd1234', 'User 1')
     builtins.u2 = User('user2@example.com', 'Abcd1234', 'User 2')
@@ -44,17 +66,6 @@ def delete_test_data():
         builtins. ap, builtins.aun
 
 
-def setUpModule():
-    _backend = setUpBackend()
-    Instance.set_backend(_backend)
-
-    assert User._backend is Instance._backend
-    assert Org._backend is Instance._backend
-    assert isinstance(Org._backend, (IdentityBackend, MockIdentityBackend))
-    
-
-def tearDownModule():
-    tearDownBackend(Instance._backend)
 
 
 class SetBackendTest(unittest.TestCase):

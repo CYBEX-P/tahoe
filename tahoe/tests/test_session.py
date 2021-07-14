@@ -1,54 +1,61 @@
 """unittests for tahoe.session"""
 
-if __name__ != 'tahoe.tests.test_session':
-    import sys
-    sys.path = ['..', '../..'] + sys.path
-    del sys
-
+import builtins as B
 import pdb
 import unittest
 
-from tahoe import Instance, Attribute, Object, Event, Session
-from tahoe.backend import MongoBackend, MockMongoBackend
-from tahoe.tests.test_backend import MongoBackendTest
+if __name__ != 'tahoe.tests.test_session':
+    import sys, os
+    J = os.path.join
+    sys.path = ['..', J('..','..')] + sys.path
+    del J, sys, os
 
+from tahoe import Instance, Attribute, Object, Event, Session
+from tahoe.tests.backend.test_backend import setUpBackend, tearDownBackend
+    
 
 def setUpModule():
-    _backend = MongoBackendTest.setUpClass()
+    _backend = setUpBackend()
+
     Instance.set_backend(_backend)
     Attribute.set_backend(_backend)
     Object.set_backend(_backend)
     Event.set_backend(_backend)
     Session.set_backend(_backend)
 
-    assert Attribute._backend is Instance._backend
-    assert Object._backend is Instance._backend
-    assert Event._backend is Instance._backend
-    assert Session._backend is Instance._backend
-   
+    assert Instance._backend is Attribute._backend
+    assert Instance._backend is Object._backend
+    assert Instance._backend is Event._backend
+    assert Instance._backend is Session._backend
+
 
 def tearDownModule():
-    MongoBackendTest.tearDownClass()
+    tearDownBackend(Instance._backend)
 
 
 def make_test_data():
-    import builtins
-    builtins.afn = Attribute('filename', 'virus.exe')
-    builtins.afs = Attribute('filesize', 20012)
-    builtins.of = Object('file', [afn, afs])
+    B.afn = Attribute('filename', 'virus.exe')
+    B.afs = Attribute('filesize', 20012)
+    B.of = Object('file', [afn, afs])
 
-    builtins.au = Attribute('url', 'example.com')
+    B.au = Attribute('url', 'example.com')
 
-    builtins.orgid = 'a441b15fe9a3cf56661190a0b93b9dec7d041272' \
+    B.orgid = 'a441b15fe9a3cf56661190a0b93b9dec7d041272' \
                 '88cc87250967cf3b52894d11'''
 
-    builtins.e1 = Event('file_download', [au, of], orgid, 100)
-    builtins.e2 = Event('file_download', [au, of], orgid, 200)
-    builtins.e3 = Event('file_download', [au, of], orgid, 300)
+    B.e1 = Event('file_download', [au, of], orgid, 100)
+    B.e2 = Event('file_download', [au, of], orgid, 200)
+    B.e3 = Event('file_download', [au, of], orgid, 300)
 
-    builtins.ausr = Attribute('user', 'johndoe')
-    builtins.aday = Attribute('day', 'monday')
-    builtins.os = Object('session', [ausr, aday])
+    B.ausr = Attribute('user', 'johndoe')
+    B.aday = Attribute('day', 'monday')
+    B.os = Object('session', [ausr, aday])
+
+
+def delete_test_data():
+    del B.afn, B.afs, B.of, B.au, B.orgid, B.e1, B.e2, B.e3, B.ausr, B.aday, \
+        B.os
+    
 
 class SetBackendTest(unittest.TestCase):
     """
@@ -105,13 +112,18 @@ class SetBackendTest(unittest.TestCase):
     pass
 
 
+
 class InitTest(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        assert isinstance(Session._backend, (MongoBackend, MockMongoBackend))
-        Session._backend.drop()
+        Instance._backend.drop()
         make_test_data()
+
+    @classmethod
+    def tearDownClass(cls):
+        delete_test_data()
+        Instance._backend.drop()        
 
     def test_01_init_no_data(self):
         s = Session('test')
@@ -194,11 +206,16 @@ class InitTest(unittest.TestCase):
 
         
 class AddRemoveEventTest(unittest.TestCase):
+
     @classmethod
     def setUpClass(cls):
-        assert isinstance(Session._backend, (MongoBackend, MockMongoBackend))
-        Session._backend.drop()
+        Instance._backend.drop()
         make_test_data()
+
+    @classmethod
+    def tearDownClass(cls):
+        delete_test_data()
+        Instance._backend.drop()        
 
     def test_01_add_event(self):
         s = Session('test', os)
