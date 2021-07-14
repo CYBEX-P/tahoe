@@ -50,9 +50,7 @@ This above event is a graph with `5` edges: `0xE1 --> 0xB1, 0xE1 -->
 objects and their attributes must be included in the list.
 """
 
-
 from datetime import datetime
-import pdb
 
 if __name__ != 'tahoe.event.event':
     import sys, os
@@ -240,18 +238,21 @@ class Event(tahoe.OES):
         super().__init__(sub_type=sub_type, **kwargs)
 
     def daysold(self):
+        """Number of days passed since the event was recorded."""
+        
         today = datetime.today() 
         event_time =  datetime.utcfromtimestamp(self.timestamp)
         dp = (today - event_time).days
         return dp
 
     def degree(self, itype='all'):
+        """Number of attributes/objects directly connected to self."""
+        
         if itype != 'all':
             q = {'itype': itype, '_hash': {'$in': self._ref}}
             return self._backend.count_documents(q)
         else:
             return len(self._ref)
-
     
     def get_context(self, data):
         if not isinstance(data, list):
@@ -302,16 +303,21 @@ class Event(tahoe.OES):
 
     def set_category(self, category):
         """
+        Set the category of this event as benign/malicious/unknown.
+        
         Parameters
         ----------
         category : {"benign", "malicious", "unknown"}
             Denotes if the event is benign or malicious or unknown.
         """
+        
         self._validate_param(category=category)
         self._update({'category': category})
 
     def set_context(self, data, context, *args):
         """
+        Set context of one or more attributes/objects in this event.
+        
         Parameters
         ----------
         data : list of tahoe.Attribute or tahoe.Object
@@ -322,8 +328,11 @@ class Event(tahoe.OES):
         More Parameters
         ---------------
         data2 : list of tahoe.Attribute or tahoe.Object
+        
         context2 : {"benign", "malicious", "unknown"}
+        
         data3 : list of tahoe.Attribute or tahoe.Object
+        
         context3 : {"benign", "malicious", "unknown"}
 
         Raises
